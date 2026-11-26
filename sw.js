@@ -1,5 +1,5 @@
 // Golf Card Game: keeps the game working offline.
-const CACHE = 'golf-v11';
+const CACHE = 'golf-v12';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener('activate', e => {
@@ -10,7 +10,7 @@ self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   // Game files: use the network when online so updates arrive, fall back to the saved copy offline.
   if (url.origin === location.origin) {
-    e.respondWith(fetch(e.request).then(r => { const copy = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); return r; })
+    e.respondWith(fetch(e.request, { cache: 'no-cache' }).then(r => { const copy = r.clone(); caches.open(CACHE).then(c => c.put(e.request, copy)); return r; })
       .catch(() => caches.match(e.request).then(r => r || caches.match('index.html'))));
     return;
   }
