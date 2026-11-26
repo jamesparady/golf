@@ -1,0 +1,1270 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#06150f">
+<meta name="description" content="Six-card Golf against easy computer players.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Golf">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);background:#06150f}body{margin:0}img{max-width:100%}</style>
+<title>Golf Card Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=DM+Mono:wght@500&display=swap">
+<style>
+/* Layout: a card table seen from above. A padded leather rail frames the felt, which holds the
+   opponents' small grids, the deck/discard/drawn row, and your six cards. Glass panels below. */
+:root {
+  --room: #06150f;
+  --felt-hi: #1b6a4d;
+  --felt: #0f4a36;
+  --felt-lo: #082a1f;
+  --rail-hi: #4a2f1c;
+  --rail-lo: #1d120a;
+  --paper: #fbfaf6;
+  --paper-lo: #ebe7dc;
+  --ink: #1a1f1d;
+  --ink-soft: #6a716d;
+  --red: #c8302a;
+  --back-a: #a3192c;
+  --back-b: #5e0d1a;
+  --back-line: rgba(255,255,255,.13);
+  --glow: rgba(40,120,90,.35);
+  --gold: #f0c94f;
+  --gold-lo: #a8851f;
+  --pair: #64d28f;
+  --chalk: #eef4f0;
+  --chalk-soft: #a9c4b6;
+  --glass: rgba(255,255,255,.06);
+  --glass-line: rgba(255,255,255,.12);
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Atkinson Hyperlegible", system-ui, -apple-system, sans-serif;
+  --f-mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --thick: 0 1px 0 #d9d4c6, 0 2px 0 #c8c2b2, 0 3px 0 #b3ac9a, 0 9px 14px -2px rgba(0,0,0,.45), 0 2px 4px rgba(0,0,0,.3);
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+/* card backs and table colors chosen in Settings */
+:root[data-back="navy"] { --back-a: #2f53b8; --back-b: #0e1c4d; }
+:root[data-back="emerald"] { --back-a: #1f9563; --back-b: #0a3a26; }
+:root[data-back="midnight"] { --back-a: #2c2c36; --back-b: #0b0b10; --back-line: rgba(240,201,79,.4); }
+:root[data-back="sunset"] { --back-a: #f08a3c; --back-b: #a3285a; }
+:root[data-felt="blue"] { --felt-hi: #2a6fb3; --felt: #164a82; --felt-lo: #0a2448; --room: #050f1d; --glow: rgba(50,110,190,.35); --chalk-soft: #aac0d8; }
+:root[data-felt="red"] { --felt-hi: #a8343c; --felt: #741a22; --felt-lo: #3a0a0f; --room: #140406; --glow: rgba(170,50,60,.3); --chalk-soft: #dcb2b5; }
+:root[data-felt="purple"] { --felt-hi: #6a45b0; --felt: #432879; --felt-lo: #1f1039; --room: #0b0616; --glow: rgba(120,80,200,.32); --chalk-soft: #c4b6e0; }
+:root[data-felt="charcoal"] { --felt-hi: #545a61; --felt: #33373c; --felt-lo: #16181b; --room: #08090a; --glow: rgba(140,150,160,.22); --chalk-soft: #b8bec4; }
+:root[data-felt="wood"] { --felt-hi: #a3703f; --felt: #7a4e27; --felt-lo: #3d2410; --room: #120a04; --glow: rgba(190,130,70,.28); --chalk-soft: #dcc4a8; --rail-hi: #2c2c30; --rail-lo: #0c0c0e; }
+
+/* settings sheet */
+.sheet-bg { position: fixed; inset: 0; z-index: 100; background: rgba(0,0,0,.65); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); display: flex; align-items: flex-end; justify-content: center;
+  padding: 16px max(12px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px)); }
+@media (min-width: 620px) { .sheet-bg { align-items: center; } }
+.sheet-bg .sheet { width: 100%; max-width: 520px; max-height: calc(100% - env(safe-area-inset-top, 0px) - 8px); overflow-y: auto; background: linear-gradient(180deg, #1d2b26, #0f1815); border-color: rgba(255,255,255,.16); display: flex; flex-direction: column; gap: 18px; animation: rise .3s cubic-bezier(.2,.8,.2,1); }
+.sheet h2 { font-family: var(--f-display); margin: 0; font-size: 1.4rem; display: flex; justify-content: space-between; align-items: center; }
+.sheet h3 { margin: 0 0 10px; font-size: .78rem; text-transform: uppercase; letter-spacing: .1em; color: var(--chalk-soft); font-weight: 700; }
+.swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+.sw { border: 0; padding: 0; background: none; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 6px; color: var(--chalk-soft); font: 600 .74rem var(--f-body); }
+.sw .chip { border-radius: 10px; box-shadow: 0 0 0 2px rgba(255,255,255,.12), 0 4px 8px rgba(0,0,0,.4); transition: transform .12s, box-shadow .12s; }
+.sw.back .chip { width: 44px; height: 62px; background: #fbfaf6; padding: 4px; }
+.sw.back .chip i { display: block; width: 100%; height: 100%; border-radius: 6px;
+  background: repeating-linear-gradient(45deg, var(--l) 0 1.5px, transparent 1.5px 6px), repeating-linear-gradient(-45deg, var(--l) 0 1.5px, transparent 1.5px 6px), linear-gradient(160deg, var(--a), var(--b)); }
+.sw.tbl .chip { width: 44px; height: 44px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, var(--a), var(--b) 75%); }
+.sw[aria-pressed="true"] { color: var(--chalk); }
+.sw[aria-pressed="true"] .chip { box-shadow: 0 0 0 3px var(--gold), 0 0 14px rgba(240,201,79,.45); transform: translateY(-2px); }
+.sw:focus-visible { outline: none; } .sw:focus-visible .chip { outline: 3px solid #fff; outline-offset: 3px; }
+.toggle-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid rgba(255,255,255,.08); }
+.toggle-row:first-child { border-top: 0; }
+.toggle-row span { display: flex; flex-direction: column; gap: 2px; font-weight: 700; }
+.toggle-row small { font-weight: 400; color: var(--chalk-soft); font-size: .8rem; }
+.switch { width: 54px; height: 32px; border-radius: 16px; border: 0; padding: 3px; cursor: pointer; background: rgba(255,255,255,.15); position: relative; flex: none; transition: background .2s; }
+.switch::after { content: ""; display: block; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,.4); transition: transform .2s; }
+.switch[aria-checked="true"] { background: var(--gold); }
+.switch[aria-checked="true"]::after { transform: translateX(22px); }
+.switch:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
+/* names and stats */
+.names { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.names label { display: flex; flex-direction: column; gap: 5px; font-size: .78rem; color: var(--chalk-soft); min-width: 0; }
+.names input { font: 600 1rem var(--f-body); color: var(--chalk); background: rgba(0,0,0,.3); border: 1.5px solid rgba(255,255,255,.14); border-radius: 10px; padding: 10px 12px; min-height: 44px; width: 100%; min-width: 0; -webkit-user-select: text; user-select: text; }
+.names input:focus { outline: none; border-color: var(--gold); }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat { background: rgba(0,0,0,.28); border-radius: 12px; padding: 10px 8px; text-align: center; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06); }
+.stat b { display: block; font-family: var(--f-display); font-size: 1.6rem; line-height: 1.1; color: var(--chalk); font-variant-numeric: tabular-nums; }
+.stat.hot b { color: var(--gold); }
+.stat small { color: var(--chalk-soft); font-size: .72rem; }
+.stats-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; font-size: .82rem; color: var(--chalk-soft); }
+.linkbtn { background: none; border: 0; color: var(--chalk-soft); font: 600 .82rem var(--f-body); text-decoration: underline; cursor: pointer; padding: 6px 0; min-height: 32px; }
+.linkbtn.danger { color: #ff8a6b; }
+
+/* turn timer */
+.timer { display: flex; align-items: center; gap: 10px; padding-inline: 8px; }
+.timer .track { flex: 1; height: 6px; border-radius: 3px; background: rgba(0,0,0,.35); overflow: hidden; }
+.timer .track i { display: block; height: 100%; border-radius: 3px; background: var(--gold); transition: width .2s linear, background .3s; }
+.timer.low .track i { background: #ff6b4a; }
+.timer span { font-family: var(--f-mono); font-size: .85rem; min-width: 2.6em; text-align: right; }
+.timer.low span { color: #ff8a6b; }
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { min-height: 100%; }
+body {
+  background:
+    radial-gradient(90% 60% at 50% 0%, var(--glow), transparent 70%),
+    radial-gradient(120% 90% at 50% 110%, #0b2a1f, transparent 70%),
+    var(--room);
+  background-attachment: fixed;
+  color: var(--chalk);
+  font-family: var(--f-body);
+  font-size: 15px;
+  touch-action: manipulation;
+  -webkit-user-select: none; user-select: none;
+}
+.wrap {
+  max-width: 580px; margin: 0 auto;
+  padding-left: max(12px, env(safe-area-inset-left, 0px));
+  padding-right: max(12px, env(safe-area-inset-right, 0px));
+  padding-block: 10px 32px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-inline: 4px; }
+h1 { font-family: var(--f-display); font-weight: 800; font-size: 1.5rem; margin: 0; display: flex; align-items: center; gap: 8px; letter-spacing: -.01em; color: var(--chalk); }
+h1 svg { filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
+.hdr-right { display: flex; align-items: center; gap: 10px; }
+.holebadge { font-family: var(--f-mono); font-size: .76rem; color: var(--chalk-soft); text-align: right; line-height: 1.3; }
+.holebadge b { color: var(--chalk); }
+.icon-btn { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--glass-line); background: var(--glass); color: var(--chalk); display: grid; place-items: center; cursor: pointer; }
+.icon-btn:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+
+/* the table */
+.rail {
+  border-radius: 30px; padding: 9px;
+  background: linear-gradient(160deg, var(--rail-hi), var(--rail-lo) 60%);
+  box-shadow: 0 1px 0 rgba(255,255,255,.12) inset, 0 -2px 0 rgba(0,0,0,.4) inset, 0 24px 50px -10px rgba(0,0,0,.8), 0 6px 14px rgba(0,0,0,.5);
+}
+.felt {
+  border-radius: 22px; padding: 12px 10px 16px;
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .09 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"),
+    radial-gradient(110% 75% at 50% 45%, var(--felt-hi) 0%, var(--felt) 55%, var(--felt-lo) 100%);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.35), inset 0 10px 30px rgba(0,0,0,.45), inset 0 -6px 20px rgba(0,0,0,.35);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.felt.locked { pointer-events: none; }
+
+/* cards */
+.card {
+  --w: 60px;
+  width: var(--w); aspect-ratio: 5 / 7; position: relative; border: 0; padding: 0; background: none;
+  font: inherit; color: var(--ink); cursor: default; perspective: 700px;
+  border-radius: calc(var(--w) * .1);
+  transition: transform .2s ease;
+}
+.c3d { position: absolute; inset: 0; transform-style: preserve-3d; border-radius: inherit; }
+.c3d.down { transform: rotateY(180deg); }
+.cf { position: absolute; inset: 0; border-radius: inherit; backface-visibility: hidden; -webkit-backface-visibility: hidden; box-shadow: var(--thick); overflow: hidden; }
+.cf.front { background: linear-gradient(165deg, var(--paper) 0%, var(--paper) 55%, var(--paper-lo) 100%); }
+.cf.front::after { content: ""; position: absolute; inset: 0; background: linear-gradient(125deg, rgba(255,255,255,.75) 0%, rgba(255,255,255,0) 38%); pointer-events: none; }
+.cf.back { transform: rotateY(180deg); background: var(--paper); }
+.cf.back::before {
+  content: ""; position: absolute; inset: 7%; border-radius: calc(var(--w) * .06);
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255,255,255,.28) 0 12%, transparent 13%),
+    repeating-linear-gradient(45deg, var(--back-line) 0 1.5px, transparent 1.5px 7px),
+    repeating-linear-gradient(-45deg, var(--back-line) 0 1.5px, transparent 1.5px 7px),
+    linear-gradient(160deg, var(--back-a), var(--back-b));
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.25), inset 0 2px 6px rgba(255,255,255,.15);
+}
+.cf.back::after { content: ""; position: absolute; inset: 0; background: linear-gradient(125deg, rgba(255,255,255,.35) 0%, rgba(255,255,255,0) 40%); }
+.card .rk { position: absolute; top: 5%; left: 9%; font-family: var(--f-display); font-weight: 800; font-size: calc(var(--w) * .27); line-height: 1; letter-spacing: -.03em; }
+.card .st { position: absolute; top: 5%; right: 8%; font-size: calc(var(--w) * .21); line-height: 1.2; }
+.card .big { position: absolute; inset: 0; display: grid; place-items: center; font-size: calc(var(--w) * .5); padding-top: 14%; text-shadow: 0 2px 2px rgba(0,0,0,.12); }
+.card .pts { position: absolute; bottom: 5%; left: 0; right: 0; text-align: center; font-family: var(--f-mono); font-size: calc(var(--w) * .13); color: var(--ink-soft); }
+.card.redsuit { color: var(--red); }
+.card.empty { border: 2px dashed rgba(255,255,255,.18); background: rgba(0,0,0,.12); }
+.card.quad .cf { box-shadow: 0 0 0 3px var(--gold), 0 0 18px rgba(240,201,79,.7), var(--thick); }
+.card.quad .pts { color: #9a7410; font-weight: 700; }
+.card.joker { color: #5b2bb0; }
+.card.joker .rk { font-size: calc(var(--w) * .15); letter-spacing: .06em; writing-mode: vertical-rl; text-orientation: upright; top: 7%; left: 7%; }
+.card.joker .st { color: var(--red); }
+.card.joker .big { background: linear-gradient(160deg, #7a3ce0, #e0408a); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.mini .card.joker .rk { display: none; }
+.mini .card.joker .st { top: 50%; bottom: auto; right: 50%; transform: translate(50%, -50%); font-size: calc(var(--w) * .6); }
+.card.paired .cf { box-shadow: 0 0 0 3px var(--pair), 0 0 14px rgba(100,210,143,.55), var(--thick); }
+.card.paired .pts { color: #22874c; font-weight: 700; }
+.card.can { cursor: pointer; }
+.card.can .cf { animation: glow 1.6s ease-in-out infinite; }
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 0 2.5px var(--gold), 0 0 6px 1px rgba(240,201,79,.35), var(--thick); }
+  50% { box-shadow: 0 0 0 2.5px var(--gold), 0 0 18px 4px rgba(240,201,79,.6), var(--thick); }
+}
+@media (hover: hover) { .card.can:hover { transform: translateY(-5px) rotateX(10deg); } }
+.card.can:active { transform: translateY(1px) scale(.97); }
+.card:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.card.flying { z-index: 60; }
+.mini .card .big, .mini .card .pts { display: none; }
+.mini .card .rk { font-size: calc(var(--w) * .42); top: 50%; left: 50%; transform: translate(-50%, -62%); }
+.mini .card .st { top: auto; bottom: 6%; right: 50%; transform: translateX(50%); font-size: calc(var(--w) * .26); }
+#deckBtn .cf.back { box-shadow: var(--stack, 0 0 0 transparent), var(--thick); overflow: visible; }
+
+/* opponents */
+.opps { display: grid; gap: 6px; grid-template-columns: repeat(var(--n, 1), minmax(0, 1fr)); }
+.opp { border-radius: 14px; padding: 6px 5px 9px; display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 0; background: rgba(0,0,0,.14); box-shadow: inset 0 0 0 1px rgba(255,255,255,.05); transition: background .3s, box-shadow .3s; }
+.opp.active { background: rgba(240,201,79,.1); box-shadow: inset 0 0 0 1.5px var(--gold), 0 0 18px rgba(240,201,79,.25); }
+.opp .who { display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 4px; font-size: .78rem; padding-inline: 3px; }
+.opp .nm { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 5px; min-width: 0; }
+.avatar { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; font-size: .62rem; font-weight: 700; color: #10241b; flex: none; box-shadow: 0 1px 2px rgba(0,0,0,.4); }
+.opp .sh { font-family: var(--f-mono); color: var(--chalk-soft); white-space: nowrap; }
+.tag { font-size: .6rem; text-transform: uppercase; letter-spacing: .08em; background: var(--gold); color: #251d02; border-radius: 4px; padding: 1px 5px; font-weight: 700; }
+.grid { display: grid; grid-template-columns: repeat(3, auto); gap: var(--g, 9px); justify-content: center; }
+.opp .grid { --g: 4px; }
+.dots i { display: inline-block; width: 4px; height: 4px; border-radius: 50%; background: var(--gold); margin-left: 2px; animation: dot 1s infinite; }
+.dots i:nth-child(2) { animation-delay: .15s; } .dots i:nth-child(3) { animation-delay: .3s; }
+@keyframes dot { 0%, 100% { opacity: .25; } 50% { opacity: 1; } }
+
+/* middle row */
+.table-mid { display: flex; gap: 16px; align-items: flex-end; justify-content: center; padding: 8px 0 4px; }
+.pile { display: flex; flex-direction: column; align-items: center; gap: 7px; }
+.pile small { font-size: .64rem; text-transform: uppercase; letter-spacing: .1em; color: var(--chalk-soft); white-space: nowrap; }
+
+.status { min-height: 2.7em; text-align: center; font-size: .95rem; line-height: 1.35; text-wrap: balance; padding-inline: 6px; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
+.status b { color: var(--gold); }
+.actions { display: flex; justify-content: center; gap: 8px; }
+.actions:not(:has(button:not([hidden]))) { display: none; }
+
+.btn {
+  font: 700 .92rem var(--f-body); border-radius: 14px; border: 0; padding: 10px 18px; cursor: pointer; min-height: 44px;
+  background: linear-gradient(180deg, #ffe07a, var(--gold)); color: #2a2003;
+  box-shadow: 0 4px 0 var(--gold-lo), 0 8px 16px rgba(0,0,0,.35);
+  transition: transform .08s, box-shadow .08s;
+}
+.btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--gold-lo), 0 3px 8px rgba(0,0,0,.35); }
+.btn.ghost { background: rgba(255,255,255,.07); color: var(--chalk); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.22), 0 4px 0 rgba(0,0,0,.35); }
+.btn.ghost:active { box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.22), 0 1px 0 rgba(0,0,0,.35); }
+.btn.small { padding: 7px 14px; min-height: 38px; font-size: .84rem; }
+.btn:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+
+.you-side { display: flex; flex-direction: column; align-items: center; gap: 8px; padding-top: 4px; }
+.you-side .who { font-size: .8rem; color: var(--chalk-soft); display: flex; gap: 12px; align-items: center; text-transform: uppercase; letter-spacing: .08em; }
+.you-side .who b { color: var(--chalk); font-family: var(--f-mono); letter-spacing: 0; }
+.you-side.active .who .nm { color: var(--gold); }
+
+/* glass panels */
+.panel { background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.035)); border: 1px solid var(--glass-line); border-radius: 20px; padding: 16px; box-shadow: 0 14px 30px -10px rgba(0,0,0,.6); }
+.result { display: flex; flex-direction: column; gap: 10px; align-items: center; text-align: center; animation: rise .45s cubic-bezier(.2,.8,.2,1); }
+@keyframes rise { from { transform: translateY(14px); opacity: .3; } to { transform: none; opacity: 1; } }
+.result h2 { font-family: var(--f-display); margin: 0; font-size: 1.4rem; text-wrap: balance; color: var(--gold); }
+.result p { margin: 0; color: var(--chalk-soft); }
+.result .row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+.standings .cap { display: flex; justify-content: space-between; font-size: .68rem; text-transform: uppercase; letter-spacing: .1em; color: var(--chalk-soft); margin-bottom: 8px; gap: 8px; }
+.st-row { display: grid; grid-template-columns: 6em 1fr 3em 3em; gap: 8px; align-items: center; padding: 7px 0; border-top: 1px solid rgba(255,255,255,.08); font-variant-numeric: tabular-nums; }
+.st-row.head { border-top: 0; padding-top: 0; font-size: .64rem; color: var(--chalk-soft); text-transform: uppercase; letter-spacing: .06em; }
+.st-row .nm { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 6px; }
+.st-row .num { font-family: var(--f-mono); text-align: right; }
+.bar { height: 8px; border-radius: 4px; background: rgba(0,0,0,.35); overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,.5); }
+.bar i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, #3fa878, #7fe0a8); transition: width .6s cubic-bezier(.2,.8,.2,1); }
+.bar i.hot { background: linear-gradient(90deg, #d8572e, #ff8a5c); }
+.st-row.lead .nm::after { content: "\2691"; color: var(--pair); }
+
+/* setup */
+.setup { display: flex; flex-direction: column; gap: 18px; }
+.setup h2 { font-family: var(--f-display); margin: 0; font-size: 1.6rem; }
+.setup p { margin: 0; color: var(--chalk-soft); line-height: 1.45; }
+.fan { position: relative; height: 112px; display: flex; justify-content: center; }
+.fan .card { position: absolute; top: 6px; transform-origin: 50% 120%; }
+.field { display: flex; flex-direction: column; gap: 8px; border: 0; padding: 0; margin: 0; }
+.field legend { font-weight: 700; margin-bottom: 8px; padding: 0; }
+.seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.seg input { position: absolute; opacity: 0; pointer-events: none; }
+.seg label { border-radius: 14px; padding: 12px 6px; text-align: center; cursor: pointer; font-weight: 700; font-size: 1.1rem; min-height: 50px;
+  background: rgba(0,0,0,.25); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.12), 0 3px 0 rgba(0,0,0,.4); transition: background .15s, transform .08s; }
+.seg label small { display: block; font-weight: 400; font-size: .72rem; color: var(--chalk-soft); margin-top: 2px; }
+.seg input:checked + label { background: linear-gradient(180deg, #ffe07a, var(--gold)); color: #2a2003; box-shadow: 0 3px 0 var(--gold-lo); }
+.seg input:checked + label small { color: #5a4a10; }
+.seg label:active { transform: translateY(2px); }
+.seg input:focus-visible + label { outline: 3px solid #fff; outline-offset: 2px; }
+.setup .btn { font-size: 1.05rem; min-height: 52px; }
+
+details.rules { border-radius: 16px; padding: 12px 16px; background: rgba(0,0,0,.2); border: 1px solid var(--glass-line); }
+details.rules summary { cursor: pointer; font-weight: 700; min-height: 28px; display: flex; align-items: center; }
+details.rules ul { margin: 8px 0 2px; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; line-height: 1.45; max-width: 65ch; }
+details.rules b { color: var(--gold); }
+.foot { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; align-items: center; font-size: .85rem; color: var(--chalk-soft); padding-inline: 4px; }
+.foot b { color: var(--chalk); font-family: var(--f-mono); }
+
+@media (prefers-reduced-motion: reduce) { .card, .card.can .cf, .result, .bar i { animation: none !important; transition: none !important; } }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>
+      <svg width="20" height="24" viewBox="0 0 22 26" aria-hidden="true"><rect x="3" y="2" width="2" height="22" fill="#eef4f0"/><path d="M5 2 L19 6.5 L5 11 Z" fill="#c8302a"/><ellipse cx="4" cy="24" rx="4" ry="1.6" fill="#a9c4b6"/></svg>
+      Golf
+    </h1>
+    <div class="hdr-right">
+      <div class="holebadge"><div id="holebadge"></div><div id="clock" hidden></div></div>
+      <button class="icon-btn" id="muteBtn" aria-label="Sound on" title="Sound"></button>
+      <button class="icon-btn" id="settingsBtn" aria-label="Settings" title="Settings"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+    </div>
+  </header>
+
+  <section class="panel setup" id="setup" hidden>
+    <div class="fan" id="fan" aria-hidden="true"></div>
+    <h2>New game</h2>
+    <p>Six-card Golf against computer players. Low score wins. The game ends after the hole where anyone reaches the point limit.</p>
+    <p id="setupPrefs"></p>
+    <fieldset class="field">
+      <legend>Computer players</legend>
+      <div class="seg">
+        <input type="radio" name="opp" id="opp1" value="1"><label for="opp1">1</label>
+        <input type="radio" name="opp" id="opp2" value="2"><label for="opp2">2</label>
+        <input type="radio" name="opp" id="opp3" value="3"><label for="opp3">3</label>
+      </div>
+    </fieldset>
+    <fieldset class="field">
+      <legend>Play to</legend>
+      <div class="seg">
+        <input type="radio" name="tgt" id="tgt50" value="50"><label for="tgt50">50<small>quick</small></label>
+        <input type="radio" name="tgt" id="tgt100" value="100"><label for="tgt100">100<small>standard</small></label>
+        <input type="radio" name="tgt" id="tgt250" value="250"><label for="tgt250">250<small>long</small></label>
+      </div>
+    </fieldset>
+    <button class="btn" id="startBtn">Deal the cards</button>
+  </section>
+
+  <div id="table" hidden>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="rail">
+        <div class="felt" id="felt">
+          <section class="opps" id="opps" aria-label="Computer players"></section>
+
+          <section class="table-mid" aria-label="Piles">
+            <div class="pile"><button class="card" id="deckBtn" data-key="deck" aria-label="Draw from the deck"><div class="c3d down"><div class="cf front"></div><div class="cf back"></div></div></button><small id="deckCount">Deck</small></div>
+            <div class="pile"><div id="discardSlot"></div><small>Discard</small></div>
+            <div class="pile"><div id="drawnSlot"></div><small id="handHint">Drawn card</small></div>
+          </section>
+
+          <div class="status" id="status" role="status" aria-live="polite"></div>
+          <div class="timer" id="timer" hidden><div class="track"><i id="timerBar"></i></div><span id="timerText">0:30</span></div>
+          <div class="actions">
+            <button class="btn ghost small" id="discardDrawn" hidden>Discard it</button>
+            <button class="btn small" id="endTurnBtn" hidden>End turn</button>
+          </div>
+
+          <section class="you-side" id="youSide" aria-label="Your cards">
+            <div class="grid" id="youGrid"></div>
+            <div class="who"><span class="nm" id="youName">You</span><span><span id="youLbl">Showing</span> <b id="youShowing">0</b></span></div>
+          </section>
+        </div>
+      </div>
+
+      <div class="panel result" id="result" hidden></div>
+
+      <section class="panel standings" aria-label="Standings">
+        <div class="cap"><span>Standings</span><span id="capTarget"></span></div>
+        <div id="standings"></div>
+      </section>
+    </div>
+  </div>
+
+  <details class="rules" id="rules">
+    <summary>How to play</summary>
+    <ul>
+      <li>Everyone has <b>6 cards</b> face down in two rows. Flip any 2 to start.</li>
+      <li>On your turn, take the <b>top discard</b> or <b>draw from the deck</b>. Swap it for any of your cards, face up or down. If you don't want a card from the deck, discard it. You may then turn over one of your face-down cards, or just end your turn.</li>
+      <li>Points: <b>Joker = −5</b>, <b>A = 1</b>, <b id="twoRule">2 = 2</b>, 3 to 10 at face value, <b>J and Q = 10</b>, <b>K = 0</b>. The deck has four jokers.</li>
+      <li>Two cards of the <b>same rank in one column</b> score 0 together. Jokers don't cancel, so a pair of jokers still scores −10.</li>
+      <li><b>Four of a kind:</b> two columns that are both pairs of the same rank score <b>−20</b> together.</li>
+      <li>When someone turns up their last card, everyone else gets <b>one more turn</b>, then all cards are revealed and scored.</li>
+      <li>Hole scores add up. When anyone reaches the <b>point limit</b>, the game ends and the <b>lowest total wins</b>.</li>
+      <li>Whoever wins a hole <b>goes first</b> on the next one.</li>
+    </ul>
+  </details>
+
+  <div class="foot">
+    <span id="record"></span>
+    <button class="btn ghost small" id="newGame">New game</button>
+  </div>
+</div>
+
+<div class="sheet-bg" id="settingsBg" hidden>
+  <section class="panel sheet" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+    <h2 id="setTitle" tabindex="-1">Settings</h2>
+    <div><h3>Your stats</h3>
+      <div class="stats" id="stats"></div>
+      <div class="stats-foot"><span id="statsNote"></span><span id="resetWrap"><button class="linkbtn" id="resetStats">Reset stats</button></span></div>
+    </div>
+    <div><h3>Names</h3>
+      <div class="names">
+        <label for="nmYou">Your name<input id="nmYou" maxlength="12" autocomplete="off" placeholder="You"></label>
+        <label for="nmBot0">Computer 1<input id="nmBot0" maxlength="12" autocomplete="off" placeholder="Mabel"></label>
+        <label for="nmBot1">Computer 2<input id="nmBot1" maxlength="12" autocomplete="off" placeholder="Otis"></label>
+        <label for="nmBot2">Computer 3<input id="nmBot2" maxlength="12" autocomplete="off" placeholder="Ruth"></label>
+      </div>
+    </div>
+    <div><h3>Card back</h3><div class="swatches" id="swBack"></div></div>
+    <div><h3>Table</h3><div class="swatches" id="swFelt"></div></div>
+    <fieldset class="field"><legend>Computer skill</legend>
+      <div class="seg">
+        <input type="radio" name="skill" id="skEasy" value="easy"><label for="skEasy">Easy<small>makes mistakes</small></label>
+        <input type="radio" name="skill" id="skMedium" value="medium"><label for="skMedium">Medium<small>plays steady</small></label>
+        <input type="radio" name="skill" id="skHard" value="hard"><label for="skHard">Hard<small>plays to win</small></label>
+      </div>
+    </fieldset>
+    <div>
+      <div class="toggle-row"><span>Sound<small>Card and game sounds</small></span><button class="switch" id="swSound" role="switch" aria-checked="true" aria-label="Sound"></button></div>
+      <div class="toggle-row"><span>Minus 2s<small>On: each 2 is worth −2. Off: each 2 is worth +2. A pair of 2s in a column always scores 0.</small></span><button class="switch" id="swTwos" role="switch" aria-checked="false" aria-label="Minus 2s"></button></div>
+      <div class="toggle-row"><span>Game clock<small>Shows how long the current game has lasted.</small></span><button class="switch" id="swClock" role="switch" aria-checked="false" aria-label="Game clock"></button></div>
+      <div class="toggle-row"><span>Turn timer<small>30 seconds per turn. When time runs out, the game makes a safe move for you.</small></span><button class="switch" id="swTimer" role="switch" aria-checked="false" aria-label="Turn timer"></button></div>
+    </div>
+    <button class="btn" id="setDone">Done</button>
+  </section>
+</div>
+
+<script>
+(() => {
+  const SUITS = [['♠︎', false], ['♥︎', true], ['♦︎', true], ['♣︎', false]];
+  const SUIT_NAMES = ['spades', 'hearts', 'diamonds', 'clubs'];
+  const RANKS = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+  const VAL = { A: 1, '2': -2, J: 10, Q: 10, K: 0, Joker: -5 };
+  const val = c => c.r === '2' ? (prefs.twos === 'minus' ? -2 : 2) : (c.r in VAL) ? VAL[c.r] : +c.r;
+  let UNKNOWN = 5; // average card value in the 56-card deck, updated by setUnknown()
+  const BOT_NAMES = ['Mabel', 'Otis', 'Ruth'];
+  const BOT_COLORS = ['#f2a7c3', '#8fd3f4', '#c9b3f5'];
+  const $ = id => document.getElementById(id);
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const SET_KEY = 'golf-settings-v2', REC_KEY = 'golf-record-v2', MUTE_KEY = 'golf-muted';
+  const store = {
+    get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+  };
+  const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const PREF_KEY = 'golf-prefs';
+  const BACKS = [
+    { id: 'crimson', name: 'Crimson', a: '#a3192c', b: '#5e0d1a', l: 'rgba(255,255,255,.18)' },
+    { id: 'navy', name: 'Navy', a: '#2f53b8', b: '#0e1c4d', l: 'rgba(255,255,255,.18)' },
+    { id: 'emerald', name: 'Emerald', a: '#1f9563', b: '#0a3a26', l: 'rgba(255,255,255,.18)' },
+    { id: 'midnight', name: 'Midnight', a: '#2c2c36', b: '#0b0b10', l: 'rgba(240,201,79,.5)' },
+    { id: 'sunset', name: 'Sunset', a: '#f08a3c', b: '#a3285a', l: 'rgba(255,255,255,.2)' }
+  ];
+  const FELTS = [
+    { id: 'green', name: 'Green', a: '#1b6a4d', b: '#082a1f', room: '#06150f' },
+    { id: 'blue', name: 'Blue', a: '#2a6fb3', b: '#0a2448', room: '#050f1d' },
+    { id: 'red', name: 'Red', a: '#a8343c', b: '#3a0a0f', room: '#140406' },
+    { id: 'purple', name: 'Purple', a: '#6a45b0', b: '#1f1039', room: '#0b0616' },
+    { id: 'charcoal', name: 'Slate', a: '#545a61', b: '#16181b', room: '#08090a' },
+    { id: 'wood', name: 'Wood', a: '#a3703f', b: '#3d2410', room: '#120a04' }
+  ];
+  const SKILL_NAMES = { easy: 'Easy', medium: 'Medium', hard: 'Hard' };
+  const prefs = Object.assign({ back: 'crimson', felt: 'green', skill: 'easy', timer: false, clock: false, myName: '', bots: [], twos: 'plus' }, store.get(PREF_KEY) || {});
+  const TURN_MS = window.__golfTurnMs || 30000;
+  const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const botName = i => (prefs.bots && prefs.bots[i] && prefs.bots[i].trim()) || BOT_NAMES[i];
+  const myName = () => (prefs.myName && prefs.myName.trim()) || 'You';
+  // display name, already escaped for HTML
+  const nm = i => esc(i === 0 ? myName() : S.players[i].name);
+  function savePrefs() { store.set(PREF_KEY, prefs); }
+  function setUnknown() { UNKNOWN = (prefs.twos === 'minus' ? 264 : 280) / 56; }
+  function renderTwosRule() { const el = document.getElementById('twoRule'); if (el) el.textContent = prefs.twos === 'minus' ? '2 = \u22122' : '2 = 2'; }
+  setUnknown();
+  function applyPrefs() {
+    document.documentElement.dataset.back = prefs.back;
+    document.documentElement.dataset.felt = prefs.felt;
+    const f = FELTS.find(x => x.id === prefs.felt) || FELTS[0];
+    const tc = document.querySelector('meta[name="theme-color"]'); if (tc) tc.content = f.room;
+  }
+  applyPrefs();
+
+  let S = null;
+  let busy = false;
+  let runId = 0;
+
+  const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const rand = a => a[Math.floor(Math.random() * a.length)];
+  const fmt = n => n < 0 ? '−' + Math.abs(n) : String(n);
+  const sum = a => a.reduce((x, y) => x + y, 0);
+  const an = r => (r === 'A' || r === '8' ? 'an ' : 'a ') + r;
+  const partner = i => i < 3 ? i + 3 : i - 3;
+
+  // ================= sound (synthesized, no files) =================
+  const Sound = (() => {
+    let ctx = null, noise = null, master = null;
+    let muted = !!store.get(MUTE_KEY);
+    function ac() {
+      if (!ctx) {
+        try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch { return null; }
+        master = ctx.createGain(); master.gain.value = .9; master.connect(ctx.destination);
+        noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+        const d = noise.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      }
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+      return ctx;
+    }
+    function burst(t, { f = 2500, q = 1.2, dur = .06, g = .5, type = 'bandpass', f2 = null }) {
+      const src = ctx.createBufferSource(); src.buffer = noise;
+      const fl = ctx.createBiquadFilter(); fl.type = type; fl.Q.value = q;
+      fl.frequency.setValueAtTime(f, t); if (f2) fl.frequency.exponentialRampToValueAtTime(f2, t + dur);
+      const gn = ctx.createGain(); gn.gain.setValueAtTime(0.0001, t); gn.gain.exponentialRampToValueAtTime(g, t + .004); gn.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      src.connect(fl).connect(gn).connect(master);
+      src.start(t, Math.random() * .5); src.stop(t + dur + .02);
+    }
+    function tone(t, freq, dur, g = .18, type = 'sine') {
+      const o = ctx.createOscillator(); o.type = type; o.frequency.value = freq;
+      const gn = ctx.createGain(); gn.gain.setValueAtTime(0.0001, t); gn.gain.exponentialRampToValueAtTime(g, t + .015); gn.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(gn).connect(master); o.start(t); o.stop(t + dur + .05);
+    }
+    const kinds = {
+      flip(t) { burst(t, { f: 3200, dur: .045, g: .45 }); burst(t + .035, { f: 1700, dur: .05, g: .3 }); },
+      slide(t) { burst(t, { f: 700, f2: 2600, q: .8, dur: .16, g: .22 }); burst(t + .17, { f: 1500, dur: .04, g: .4 }); },
+      deal(t) { burst(t, { f: 2400, dur: .035, g: .32 }); },
+      shuffle(t) { for (let i = 0; i < 16; i++) burst(t + i * .035 + Math.random() * .015, { f: 1800 + Math.random() * 1600, dur: .04, g: .22 }); },
+      tap(t) { burst(t, { f: 4200, dur: .02, g: .18 }); },
+      hole(t) { tone(t, 660, .25, .12); tone(t + .1, 880, .35, .12); },
+      win(t) { [523, 659, 784, 1047].forEach((f, i) => tone(t + i * .11, f, .45, .16, 'triangle')); },
+      lose(t) { tone(t, 392, .3, .12, 'triangle'); tone(t + .18, 311, .5, .12, 'triangle'); }
+    };
+    return {
+      unlock() { ac(); },
+      play(kind, delayMs = 0) {
+        if (muted) return;
+        const c = ac(); if (!c || c.state !== 'running') return;
+        try { kinds[kind](c.currentTime + .01 + delayMs / 1000); } catch {}
+      },
+      get muted() { return muted; },
+      toggle() { muted = !muted; store.set(MUTE_KEY, muted); if (!muted) ac(); return muted; }
+    };
+  })();
+  ['pointerdown', 'keydown'].forEach(ev => window.addEventListener(ev, () => Sound.unlock(), { passive: true }));
+  function renderMute() {
+    const m = Sound.muted;
+    $('muteBtn').setAttribute('aria-label', m ? 'Sound is off. Turn sound on' : 'Sound is on. Turn sound off');
+    $('muteBtn').innerHTML = m
+      ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="m22 9-6 6M16 9l6 6"/></svg>'
+      : '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/></svg>';
+  }
+
+  // ================= animation =================
+  // A move is recorded before the DOM is rebuilt, so we know where the card came from.
+  let pending = [];
+  let lastAnim = Promise.resolve();
+  let animCount = 0;
+  const rectOf = key => { const el = document.querySelector(`[data-key="${key}"]`); if (!el) return null; const r = el.getBoundingClientRect(); return r.width ? r : null; };
+  function mv(to, from, opts = {}) {
+    pending.push({ to, from, fromRect: from ? rectOf(from) : null, flip: !!opts.flip, delay: opts.delay || 0, sound: opts.sound });
+  }
+  function runAnims() {
+    const list = pending; pending = [];
+    if (!list.length) return Promise.resolve();
+    const felt = $('felt');
+    const ps = [];
+    for (const a of list) {
+      const el = document.querySelector(`[data-key="${a.to}"]`);
+      if (!el) continue;
+      const fromRect = a.fromRect || (a.from ? rectOf(a.from) : null);
+      Sound.play(a.sound || (fromRect ? 'slide' : 'flip'), a.delay);
+      if (REDUCED) continue;
+      if (fromRect) {
+        const r = el.getBoundingClientRect();
+        const dx = fromRect.left + fromRect.width / 2 - (r.left + r.width / 2);
+        const dy = fromRect.top + fromRect.height / 2 - (r.top + r.height / 2);
+        const s = fromRect.width / r.width;
+        const lift = Math.min(40, Math.hypot(dx, dy) * .18);
+        el.classList.add('flying');
+        const a1 = el.animate([
+          { transform: `translate(${dx}px, ${dy}px) scale(${s}) rotate(0deg)` },
+          { transform: `translate(${dx / 2}px, ${dy / 2 - lift}px) scale(${(s + 1) / 2 * 1.12}) rotate(${dx > 0 ? -6 : 6}deg)`, offset: .5 },
+          { transform: 'translate(0, 0) scale(1) rotate(0deg)' }
+        ], { duration: a.sound === 'deal' ? 320 : 460, delay: a.delay, easing: 'cubic-bezier(.25,.8,.25,1)', fill: 'backwards' });
+        ps.push(a1.finished.catch(() => {}).then(() => el.classList.remove('flying')));
+      }
+      if (a.flip) {
+        const inner = el.querySelector('.c3d');
+        if (inner) {
+          const a2 = inner.animate([{ transform: 'rotateY(180deg)' }, { transform: 'rotateY(0deg)' }],
+            { duration: 480, delay: a.delay + (fromRect ? 60 : 0), easing: 'cubic-bezier(.3,.7,.2,1)', fill: 'backwards' });
+          ps.push(a2.finished.catch(() => {}));
+        }
+      }
+    }
+    if (!ps.length) return Promise.resolve();
+    animCount++; felt.classList.add('locked');
+    const p = Promise.all(ps).then(() => { if (--animCount <= 0) { animCount = 0; felt.classList.remove('locked'); } });
+    lastAnim = p;
+    return p;
+  }
+
+  function newDeck() {
+    const d = [];
+    for (let s = 0; s < 4; s++) for (const r of RANKS) d.push({ r, s });
+    for (let j = 0; j < 4; j++) d.push({ r: 'Joker', s: 4 + j });
+    return shuffle(d);
+  }
+
+  // ================= setup =================
+  function showSetup() {
+    runId++; busy = false; pending = [];
+    if (S) S.deadline = null; $('timer').hidden = true;
+    const cfg = store.get(SET_KEY) || { opp: 1, tgt: 100 };
+    $('opp' + cfg.opp).checked = true;
+    $('tgt' + cfg.tgt).checked = true;
+    S = null;
+    $('felt').classList.remove('locked'); animCount = 0;
+    $('setup').hidden = false; $('table').hidden = true; $('newGame').hidden = true;
+    $('holebadge').textContent = ''; $('clock').hidden = true;
+    renderFan();
+    renderSetupPrefs();
+    renderRecord();
+  }
+  function renderFan() {
+    const fan = $('fan'); fan.innerHTML = '';
+    const cards = [{ r: 'K', s: 0 }, { r: '2', s: 1 }, { r: 'A', s: 2 }, { r: 'K', s: 3 }, { r: '2', s: 2 }];
+    cards.forEach((c, i) => {
+      const el = cardEl({ ...c, up: true }, { w: '68px' });
+      const tf = `translateX(${(i - 2) * 30}px) rotate(${(i - 2) * 11}deg)`;
+      el.style.transform = tf;
+      fan.appendChild(el);
+      if (!REDUCED) el.animate([{ transform: 'translateY(20px)', opacity: .2 }, { transform: tf, opacity: 1 }], { duration: 600, delay: i * 70, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'backwards' });
+    });
+  }
+  function startGame(cfg) {
+    store.set(SET_KEY, cfg);
+    runId++; busy = false;
+    const players = [{ name: 'You', cpu: false }];
+    for (let i = 0; i < cfg.opp; i++) players.push({ name: botName(i), cpu: true, color: BOT_COLORS[i] });
+    players.forEach(p => { p.scores = []; });
+    S = { v: 2, target: cfg.tgt, opp: cfg.opp, hole: 1, players, starter: 0, elapsed: 0 };
+    $('setup').hidden = true; $('table').hidden = false; $('newGame').hidden = false;
+    dealHole();
+  }
+
+  async function dealHole() {
+    const my = ++runId;
+    const deck = newDeck();
+    S.deck = deck;
+    S.players.forEach(p => { p.hand = []; });
+    for (let k = 0; k < 6; k++) S.players.forEach(p => p.hand.push({ ...deck.pop(), up: false }));
+    S.discard = [{ ...deck.pop(), up: true }];
+    S.drawn = null; S.drawnFrom = null; S.drawnBy = null; S.outBy = null; S.finalLeft = 0;
+    S.phase = 'deal'; S.flipped = 0; S.turn = null; S.last = '';
+    S.msg = 'Shuffling and dealing…';
+    busy = true;
+    const n = S.players.length;
+    let d = 0;
+    for (let k = 0; k < 6; k++) for (let p = 0; p < n; p++) { mv(`p${p}-${k}`, 'deck', { delay: 250 + d * 55, sound: 'deal' }); d++; }
+    mv('discard', 'deck', { delay: 250 + d * 55 + 80, flip: true });
+    Sound.play('shuffle');
+    render();
+    await lastAnim; if (my !== runId) return;
+    let f = 0;
+    S.players.forEach((p, k) => {
+      if (!p.cpu) return;
+      const cols = shuffle([0, 1, 2]).slice(0, 2);
+      [cols[0], cols[1] + 3].forEach(i => { p.hand[i].up = true; mv(`p${k}-${i}`, null, { flip: true, delay: f++ * 90 }); });
+    });
+    busy = false;
+    S.phase = 'flip2';
+    S.msg = `Hole ${S.hole}. Tap <b>two of your cards</b> to turn them over.`;
+    startTimer();
+    render();
+  }
+
+  // ================= scoring =================
+  // Column pairs score 0 (jokers never cancel). Two paired columns of the same rank (four of a kind) score -20.
+  function scoreWith(h, unknown) {
+    let t = 0; const pairs = {};
+    for (let c = 0; c < 3; c++) {
+      const a = h[c], b = h[c + 3];
+      const ak = unknown === undefined || a.up, bk = unknown === undefined || b.up;
+      if (ak && bk && a.r === b.r && a.r !== 'Joker') { pairs[a.r] = (pairs[a.r] || 0) + 1; continue; }
+      t += ak ? val(a) : unknown;
+      t += bk ? val(b) : unknown;
+    }
+    for (const r in pairs) if (pairs[r] >= 2) t -= 20;
+    return t;
+  }
+  const handScore = h => scoreWith(h);
+  const visibleScore = h => scoreWith(h, 0);
+  const estScore = h => scoreWith(h, UNKNOWN);
+  const isPaired = (h, i) => h[i].up && h[partner(i)].up && h[i].r === h[partner(i)].r && h[i].r !== 'Joker';
+  const isQuad = (h, i) => isPaired(h, i) && [0, 1, 2].filter(c => c !== i % 3 && isPaired(h, c) && h[c].r === h[i].r).length > 0;
+  const allUp = h => h.every(c => c.up);
+  const faceDown = h => h.map((c, i) => c.up ? -1 : i).filter(i => i >= 0);
+  const totals = () => S.players.map(p => sum(p.scores));
+
+  // ================= your actions =================
+  const yourMove = () => !busy && S && S.turn === 0;
+
+  function onYourCard(i) {
+    if (busy || !S) return;
+    const h = S.players[0].hand;
+    if (S.phase === 'flip2') {
+      if (h[i].up) return;
+      mv('p0-' + i, null, { flip: true });
+      h[i].up = true; S.flipped++;
+      if (S.flipped === 2) return startPlay();
+      S.msg = 'One more. Tap another card to turn it over.';
+      return render();
+    }
+    if (!yourMove()) return;
+    if (S.phase === 'drawn') {
+      const old = h[i];
+      mv('p0-' + i, 'drawn');
+      mv('discard', 'p0-' + i, { flip: !old.up, delay: 90 });
+      h[i] = { ...S.drawn, up: true };
+      S.discard.push({ ...old, up: true });
+      S.last = `You swapped in the ${h[i].r} and threw away ${old.up ? 'your ' + old.r : 'a face-down ' + old.r}.`;
+      S.drawn = null;
+      return endTurn(0);
+    }
+    if (S.phase === 'flipOne' && !h[i].up) {
+      mv('p0-' + i, null, { flip: true });
+      h[i].up = true;
+      S.last = `You turned over ${an(h[i].r)}.`;
+      return endTurn(0);
+    }
+  }
+  function onDeck() {
+    if (!yourMove() || S.phase !== 'draw') return;
+    mv('drawn', 'deck', { flip: true });
+    S.drawn = { ...drawFromDeck(), up: true }; S.drawnFrom = 'deck'; S.drawnBy = 0;
+    S.phase = 'drawn';
+    S.msg = `You drew the <b>${S.drawn.r}</b>. Tap one of your cards to swap it in, or discard it.`;
+    render();
+  }
+  function onDiscardPile() {
+    if (!yourMove()) return;
+    if (S.phase === 'draw') {
+      mv('drawn', 'discard');
+      S.drawn = S.discard.pop(); S.drawnFrom = 'discard'; S.drawnBy = 0;
+      S.phase = 'drawn';
+      S.msg = `You took the <b>${S.drawn.r}</b>. Tap one of your cards to swap it in.`;
+      render();
+    } else if (S.phase === 'drawn' && S.drawnFrom === 'deck') discardDrawn();
+  }
+  function discardDrawn() {
+    if (!yourMove() || S.phase !== 'drawn' || S.drawnFrom !== 'deck') return;
+    mv('discard', 'drawn');
+    S.discard.push(S.drawn);
+    const r = S.drawn.r; S.drawn = null;
+    if (faceDown(S.players[0].hand).length) {
+      S.phase = 'flipOne';
+      S.discardedRank = r;
+      S.msg = `You discarded the ${r}. Tap <b>End turn</b>, or turn over a face-down card if you want.`;
+      render();
+    } else {
+      S.last = `You discarded the ${r}.`;
+      endTurn(0);
+    }
+  }
+  function endTurnNoFlip() {
+    if (!yourMove() || S.phase !== 'flipOne') return;
+    Sound.play('tap');
+    S.last = `You discarded the ${S.discardedRank}.`;
+    endTurn(0);
+  }
+  function drawFromDeck() {
+    if (!S.deck.length) {
+      const top = S.discard.pop();
+      S.deck = shuffle(S.discard.map(c => ({ r: c.r, s: c.s })));
+      S.discard = [top];
+      Sound.play('shuffle');
+    }
+    return S.deck.pop();
+  }
+
+  // ================= turn flow =================
+  function startPlay() { stopTimer(); beginTurn(S.starter); }
+
+  function beginTurn(p) {
+    S.turn = p;
+    const pl = S.players[p];
+    const lead = S.last ? S.last + ' ' : '';
+    if (!pl.cpu) {
+      S.phase = 'draw';
+      S.msg = lead + (S.outBy != null ? `<b>${nm(S.outBy)} is out.</b> Last turn: draw or take the discard.` : 'Your turn. Draw from the <b>deck</b> or take the <b>discard</b>.');
+      startTimer();
+      render();
+    } else {
+      S.phase = 'cpu';
+      S.msg = lead + `${nm(p)} is thinking…`;
+      render();
+      cpuTurn(p);
+    }
+  }
+
+  function endTurn(p) {
+    S.phase = 'between';
+    if (p === 0) stopTimer();
+    if (S.outBy == null && allUp(S.players[p].hand)) {
+      S.outBy = p; S.finalLeft = S.players.length - 1;
+      S.last += p === 0 ? ' You’re out. Everyone else gets one more turn.' : ` ${nm(p)} is out. Everyone else gets one more turn.`;
+    } else if (S.outBy != null && S.outBy !== p) {
+      S.finalLeft--;
+      if (S.finalLeft <= 0) { render(); return endHole(); }
+    }
+    beginTurn((p + 1) % S.players.length);
+  }
+
+  // ================= easy computer =================
+  function bestSwap(h, card, avoidOut) {
+    const base = estScore(h);
+    let best = { i: -1, imp: -Infinity };
+    const downs = faceDown(h).length;
+    for (let i = 0; i < 6; i++) {
+      if (avoidOut && !h[i].up && downs === 1) continue;
+      const t = h.slice(); t[i] = { ...card, up: true };
+      const imp = base - estScore(t);
+      if (imp > best.imp || (imp === best.imp && Math.random() < .5)) best = { i, imp };
+    }
+    return best;
+  }
+
+  async function cpuTurn(p) {
+    const my = ++runId;
+    busy = true;
+    const pl = S.players[p], h = pl.hand;
+    const lastTurn = S.outBy != null;
+    await lastAnim;
+    await sleep(600);
+    if (my !== runId) return;
+    const skill = prefs.skill;
+    const others = () => Math.min(...S.players.filter((_, k) => k !== p).map(o => estScore(o.hand)));
+    // Hard players won't end the hole while they're likely behind.
+    const smartPick = card => {
+      let x = bestSwap(h, card);
+      if (skill === 'hard' && !lastTurn && x.i >= 0 && !h[x.i].up && faceDown(h).length === 1) {
+        const t = h.slice(); t[x.i] = { ...card, up: true };
+        if (estScore(t) > others() + 1) x = bestSwap(h, card, true);
+      }
+      return x;
+    };
+    const top = S.discard[S.discard.length - 1];
+    const b = smartPick(top);
+    const takeDiscard = b.i >= 0 && (
+      skill === 'easy' ? b.imp >= 4 && Math.random() < .7 :
+      skill === 'medium' ? b.imp >= 2.5 || (lastTurn && b.imp >= 1) :
+      b.imp >= 2 || (lastTurn && b.imp > 0));
+    let note;
+    if (takeDiscard) {
+      mv('drawn', 'discard');
+      S.discard.pop(); S.drawn = { ...top }; S.drawnFrom = 'discard'; S.drawnBy = p;
+      S.msg = `${nm(p)} takes the <b>${top.r}</b> from the discard…`; render();
+      await sleep(850); if (my !== runId) return;
+      const old = h[b.i];
+      mv(`p${p}-${b.i}`, 'drawn');
+      mv('discard', `p${p}-${b.i}`, { flip: !old.up, delay: 90 });
+      h[b.i] = { ...top, up: true };
+      S.discard.push({ ...old, up: true }); S.drawn = null;
+      note = `${nm(p)} took the ${top.r} and threw away ${old.up ? an(old.r) : 'a face-down ' + old.r}.`;
+    } else {
+      mv('drawn', 'deck', { flip: true });
+      const c = { ...drawFromDeck(), up: true };
+      S.drawn = c; S.drawnFrom = 'deck'; S.drawnBy = p;
+      S.msg = `${nm(p)} draws from the deck: <b>${c.r}</b>…`; render();
+      await sleep(950); if (my !== runId) return;
+      const d = smartPick(c);
+      const keep = d.i >= 0 && (lastTurn ? d.imp > 0 :
+        skill === 'easy' ? d.imp > 2 && Math.random() < .75 :
+        skill === 'medium' ? d.imp > .9 : d.imp > .4);
+      if (keep) {
+        const old = h[d.i];
+        mv(`p${p}-${d.i}`, 'drawn');
+        mv('discard', `p${p}-${d.i}`, { flip: !old.up, delay: 90 });
+        h[d.i] = { ...c, up: true };
+        S.discard.push({ ...old, up: true }); S.drawn = null;
+        note = `${nm(p)} kept the ${c.r} and threw away ${old.up ? an(old.r) : 'a face-down ' + old.r}.`;
+      } else {
+        mv('discard', 'drawn');
+        S.discard.push(c); S.drawn = null;
+        const downs = faceDown(h);
+        const hiddenPair = downs.filter(i => !h[partner(i)].up);
+        // Flipping after a discard is optional for everyone.
+        // Easy skips at random. Medium won't turn over its last card while behind.
+        // Hard flips early for information, then only keeps flipping when it's ahead.
+        const behind = estScore(h) > others() + 1;
+        const skipFlip = lastTurn ||
+          (skill === 'easy' ? Math.random() < .35 :
+           skill === 'medium' ? (downs.length === 1 && behind) || Math.random() < .15 :
+           downs.length <= 2 && behind);
+        if (downs.length && !skipFlip) {
+          const pick = skill === 'easy' ? rand(downs) : rand(hiddenPair.length ? hiddenPair : downs);
+          mv(`p${p}-${pick}`, null, { flip: true, delay: 300 });
+          h[pick].up = true;
+          note = `${nm(p)} discarded the ${c.r} and turned over ${an(h[pick].r)}.`;
+        } else note = `${nm(p)} discarded the ${c.r}${downs.length ? ' and kept its cards as they were' : ''}.`;
+      }
+    }
+    S.last = note;
+    busy = false;
+    render();
+    await lastAnim;
+    await sleep(250); if (my !== runId) return;
+    endTurn(p);
+  }
+
+  // ================= hole end =================
+  async function endHole() {
+    stopTimer();
+    const my = ++runId;
+    busy = true;
+    S.phase = 'reveal';
+    let k = 0;
+    S.players.forEach((p, pi) => p.hand.forEach((c, i) => { if (!c.up) { c.up = true; mv(`p${pi}-${i}`, null, { flip: true, delay: k++ * 110 }); } }));
+    S.players.forEach(p => p.scores.push(handScore(p.hand)));
+    S.msg = (S.last ? S.last + ' ' : '') + 'All cards revealed.';
+    render();
+    await lastAnim; await sleep(450); if (my !== runId) return;
+    busy = false;
+    const over = totals().some(t => t >= S.target);
+    S.phase = over ? 'gameOver' : 'holeOver';
+    if (over) { recordResult(); Sound.play(winners().includes(0) ? 'win' : 'lose'); }
+    else Sound.play('hole');
+    render();
+  }
+  function nextHole() {
+    S.hole++;
+    S.starter = holeWinner();
+    dealHole();
+  }
+  function holeWinner() {
+    // lowest score on the last hole goes first; a tie goes to the tied player who comes first after the last starter
+    const n = S.players.length, sc = S.players.map(p => p.scores.at(-1)), lo = Math.min(...sc);
+    for (let k = 0; k < n; k++) { const i = (S.starter + k) % n; if (sc[i] === lo) return i; }
+    return 0;
+  }
+  function winners() {
+    const t = totals(), lo = Math.min(...t);
+    return t.map((v, i) => v === lo ? i : -1).filter(i => i >= 0);
+  }
+  function recordResult() {
+    const r = Object.assign({ played: 0, won: 0, streak: 0, best: 0 }, store.get(REC_KEY) || {});
+    r.played++;
+    if (winners().includes(0)) { r.won++; r.streak++; r.best = Math.max(r.best, r.streak); } else r.streak = 0;
+    store.set(REC_KEY, r);
+  }
+
+  // ================= render =================
+  function cardEl(c, opts = {}) {
+    const el = document.createElement(opts.button ? 'button' : 'div');
+    el.className = 'card';
+    el.style.setProperty('--w', opts.w || '60px');
+    if (opts.key) el.dataset.key = opts.key;
+    if (!c) { el.classList.add('empty'); el.setAttribute('aria-label', 'Empty'); return el; }
+    let front = '';
+    if (c.up) {
+      const v = val(c);
+      const pts = `<span class="pts">${fmt(v)} pt${Math.abs(v) === 1 ? '' : 's'}</span>`;
+      if (c.r === 'Joker') {
+        el.classList.add('joker');
+        front = `<span class="rk">JOKER</span><span class="st">\u2605\uFE0E</span><span class="big">\u2605\uFE0E</span>${pts}`;
+        el.setAttribute('aria-label', `Joker, ${v} points`);
+      } else {
+        const [sym, red] = SUITS[c.s];
+        if (red) el.classList.add('redsuit');
+        front = `<span class="rk">${c.r}</span><span class="st">${sym}</span><span class="big">${sym}</span>${pts}`;
+        el.setAttribute('aria-label', `${c.r} of ${SUIT_NAMES[c.s]}, ${v} points`);
+      }
+    } else el.setAttribute('aria-label', 'Face-down card');
+    el.innerHTML = `<div class="c3d${c.up ? '' : ' down'}"><div class="cf front">${front}</div><div class="cf back"></div></div>`;
+    return el;
+  }
+
+  function sizes() {
+    const W = Math.min(document.documentElement.clientWidth, 580) - 24 - 18 - 20;
+    const n = S.players.length - 1;
+    const oppW = Math.max(22, Math.min(n === 1 ? 54 : 44, Math.floor((W - 6 * (n - 1) - n * (10 + 8)) / (3 * n))));
+    const youW = Math.max(56, Math.min(92, Math.floor((W - 18) / 3.3)));
+    const midW = Math.max(50, Math.min(74, Math.floor((W - 32) / 3.7)));
+    return { oppW: oppW + 'px', youW: youW + 'px', midW: midW + 'px' };
+  }
+  const avatar = p => `<span class="avatar" style="background:${p.color}">${esc([...p.name][0] || '?')}</span>`;
+
+  function render() {
+    if (!S) return lastAnim;
+    const sz = sizes();
+    const revealed = ['reveal', 'holeOver', 'gameOver'].includes(S.phase);
+    $('holebadge').innerHTML = `Hole <b>${S.hole}</b><br>playing to <b>${S.target}</b>`;
+
+    const opps = $('opps'); opps.innerHTML = '';
+    opps.style.setProperty('--n', S.players.length - 1);
+    S.players.forEach((p, k) => {
+      if (!p.cpu) return;
+      const box = document.createElement('div');
+      const active = S.turn === k && !revealed && S.phase !== 'flip2' && S.phase !== 'deal';
+      box.className = 'opp mini' + (active ? ' active' : '');
+      const score = revealed ? handScore(p.hand) : visibleScore(p.hand);
+      const thinking = active && S.phase === 'cpu' && !S.drawn;
+      box.innerHTML = `<div class="who"><span class="nm">${avatar(p)}${nm(k)}${S.outBy === k ? ' <span class="tag">out</span>' : ''}</span><span class="sh">${thinking ? '<span class="dots"><i></i><i></i><i></i></span>' : (revealed ? '' : '≈') + fmt(score)}</span></div>`;
+      const g = document.createElement('div'); g.className = 'grid';
+      p.hand.forEach((c, i) => {
+        const el = cardEl(c, { w: sz.oppW, key: `p${k}-${i}` });
+        if (isPaired(p.hand, i)) el.classList.add(isQuad(p.hand, i) ? 'quad' : 'paired');
+        g.appendChild(el);
+      });
+      box.appendChild(g);
+      opps.appendChild(box);
+    });
+
+    const g = $('youGrid'); g.innerHTML = '';
+    const h = S.players[0].hand;
+    h.forEach((c, i) => {
+      const el = cardEl(c, { button: true, w: sz.youW, key: 'p0-' + i });
+      if (isPaired(h, i)) el.classList.add(isQuad(h, i) ? 'quad' : 'paired');
+      let can = false;
+      if (!busy) {
+        if (S.phase === 'flip2') can = !c.up;
+        else if (S.turn === 0 && S.phase === 'drawn') can = true;
+        else if (S.turn === 0 && S.phase === 'flipOne') can = !c.up;
+      }
+      if (can) el.classList.add('can');
+      el.disabled = !can;
+      el.addEventListener('click', () => onYourCard(i));
+      g.appendChild(el);
+    });
+    $('youShowing').textContent = fmt(revealed ? handScore(h) : visibleScore(h));
+    $('youLbl').textContent = revealed ? 'Hole score' : 'Showing';
+    $('youSide').classList.toggle('active', S.turn === 0 && !revealed);
+    $('youName').innerHTML = esc(myName()) + (S.outBy === 0 ? ' <span class="tag">out</span>' : '');
+
+    const deckBtn = $('deckBtn');
+    deckBtn.style.setProperty('--w', sz.midW);
+    const layers = Math.min(6, Math.ceil(S.deck.length / 6));
+    deckBtn.style.setProperty('--stack', Array.from({ length: layers }, (_, i) => `${(i + 1) * .5}px ${(i + 1) * 1.6}px 0 ${i % 2 ? '#e6e1d4' : '#bdb6a3'}`).join(',') || '0 0 0 transparent');
+    const canDraw = yourMove() && S.phase === 'draw';
+    deckBtn.classList.toggle('can', canDraw);
+    deckBtn.disabled = !canDraw;
+    $('deckCount').textContent = `Deck · ${S.deck.length}`;
+
+    const top = S.discard[S.discard.length - 1];
+    const ds = $('discardSlot'); ds.innerHTML = '';
+    const dEl = cardEl(top, { button: true, w: sz.midW, key: 'discard' });
+    const canTake = canDraw && !!top;
+    const canDrop = yourMove() && S.phase === 'drawn' && S.drawnFrom === 'deck';
+    if (canTake || canDrop) dEl.classList.add('can');
+    dEl.disabled = !(canTake || canDrop);
+    if (canDrop) dEl.setAttribute('aria-label', 'Discard the drawn card');
+    dEl.addEventListener('click', onDiscardPile);
+    ds.appendChild(dEl);
+
+    const slot = $('drawnSlot'); slot.innerHTML = '';
+    slot.appendChild(cardEl(S.drawn, { w: sz.midW, key: 'drawn' }));
+    $('handHint').textContent = S.drawn ? (S.drawnBy === 0 ? 'You drew' : `${S.players[S.drawnBy].name} drew`) : 'Drawn card';
+    $('discardDrawn').hidden = !canDrop;
+    $('endTurnBtn').hidden = !(yourMove() && S.phase === 'flipOne');
+
+    $('status').innerHTML = S.msg || '';
+
+    const res = $('result');
+    if (S.phase === 'holeOver' || S.phase === 'gameOver') {
+      const wasHidden = res.hidden;
+      res.hidden = false;
+      const hole = S.players.map(p => p.scores.at(-1));
+      const lo = Math.min(...hole);
+      const hwIdx = hole.map((v, i) => v === lo ? i : -1).filter(i => i >= 0);
+      const holeLine = hwIdx.length > 1 ? `Hole ${S.hole} shared by ${hwIdx.map(nm).join(' and ')}` : (hwIdx[0] === 0 ? `You win hole ${S.hole}` : `${nm(hwIdx[0])} wins hole ${S.hole}`);
+      const scores = S.players.map((p, i) => `${nm(i)} ${fmt(hole[i])}`).join(', ');
+      if (S.phase === 'holeOver') {
+        const hw = holeWinner();
+        res.innerHTML = `<h2>${holeLine}</h2><p>${scores}.</p><p>${hw === 0 ? 'You go first next hole.' : nm(hw) + ' goes first next hole.'}</p><button class="btn" id="nextBtn">Deal hole ${S.hole + 1}</button>`;
+        $('nextBtn').addEventListener('click', () => { Sound.play('tap'); nextHole(); });
+      } else {
+        const w = winners(), t = totals();
+        const names = w.map(nm);
+        const line = w.includes(0) ? (w.length > 1 ? 'You tie for the win' : 'You win the game') : `${names.join(' and ')} win${names.length > 1 ? '' : 's'} the game`;
+        const busted = S.players.map((p, i) => t[i] >= S.target ? nm(i) : null).filter(Boolean).join(' and ');
+        res.innerHTML = `<h2>${line}</h2><p>${busted} reached ${S.target} after ${S.hole} hole${S.hole === 1 ? '' : 's'}. Lowest total: ${fmt(Math.min(...t))}.${w.includes(0) && (store.get(REC_KEY) || {}).streak > 1 ? ' That\u2019s ' + store.get(REC_KEY).streak + ' wins in a row!' : ''}${prefs.clock ? ' Time: ' + $('clock').textContent.replace(/^\S+\s/, '') + '.' : ''}</p><div class="row"><button class="btn" id="againBtn">Play again</button><button class="btn ghost" id="changeBtn">Change settings</button></div>`;
+        $('againBtn').addEventListener('click', () => startGame({ opp: S.opp, tgt: S.target }));
+        $('changeBtn').addEventListener('click', showSetup);
+      }
+      if (wasHidden) requestAnimationFrame(() => res.scrollIntoView({ behavior: REDUCED ? 'auto' : 'smooth', block: 'nearest' }));
+    } else res.hidden = true;
+
+    renderStandings();
+    renderRecord();
+    renderClock();
+    return runAnims();
+  }
+
+  function renderStandings() {
+    const t = totals();
+    const lo = Math.min(...t);
+    const anyScored = S.players[0].scores.length > 0;
+    $('capTarget').textContent = `Game ends at ${S.target}`;
+    const prev = {};
+    document.querySelectorAll('#standings .bar i').forEach(b => prev[b.dataset.k] = b.style.width);
+    let html = '<div class="st-row head"><span>Player</span><span></span><span class="num">Hole</span><span class="num">Total</span></div>';
+    S.players.forEach((p, i) => {
+      const pct = Math.max(0, Math.min(100, t[i] / S.target * 100));
+      const last = p.scores.length ? fmt(p.scores.at(-1)) : '–';
+      html += `<div class="st-row${anyScored && t[i] === lo ? ' lead' : ''}"><span class="nm">${p.cpu ? avatar(p) : ''}${nm(i)}</span><span class="bar"><i data-k="${i}" data-w="${pct}" class="${pct >= 75 ? 'hot' : ''}" style="width:${prev[i] || '0%'}"></i></span><span class="num">${last}</span><span class="num">${fmt(t[i])}</span></div>`;
+    });
+    $('standings').innerHTML = html;
+    requestAnimationFrame(() => document.querySelectorAll('#standings .bar i').forEach(b => b.style.width = b.dataset.w + '%'));
+  }
+  function renderRecord() {
+    const r = store.get(REC_KEY);
+    $('record').innerHTML = r && r.played ? `Games won: <b>${r.won}</b> of <b>${r.played}</b>${r.streak ? ` \u00b7 Streak: <b>${r.streak}</b>` : ''}` : 'Finish a game to start your record.';
+  }
+
+  // ================= settings =================
+  function renderSettings() {
+    $('swBack').innerHTML = BACKS.map(b => `<button class="sw back" data-id="${b.id}" aria-pressed="${prefs.back === b.id}" aria-label="${b.name} card back"><span class="chip"><i style="--a:${b.a};--b:${b.b};--l:${b.l}"></i></span>${b.name}</button>`).join('');
+    $('swFelt').innerHTML = FELTS.map(f => `<button class="sw tbl" data-id="${f.id}" aria-pressed="${prefs.felt === f.id}" aria-label="${f.name} table"><span class="chip" style="--a:${f.a};--b:${f.b}"></span>${f.name}</button>`).join('');
+    $('sk' + SKILL_NAMES[prefs.skill]).checked = true;
+    $('swTwos').setAttribute('aria-checked', String(prefs.twos === 'minus'));
+    renderStats();
+    $('nmYou').value = prefs.myName || '';
+    [0, 1, 2].forEach(i => { $('nmBot' + i).value = (prefs.bots && prefs.bots[i]) || ''; });
+    $('swSound').setAttribute('aria-checked', String(!Sound.muted));
+    $('swTimer').setAttribute('aria-checked', String(!!prefs.timer));
+    $('swClock').setAttribute('aria-checked', String(!!prefs.clock));
+    $('swBack').querySelectorAll('.sw').forEach(b => b.addEventListener('click', () => { prefs.back = b.dataset.id; savePrefs(); applyPrefs(); Sound.play('flip'); renderSettings(); }));
+    $('swFelt').querySelectorAll('.sw').forEach(b => b.addEventListener('click', () => { prefs.felt = b.dataset.id; savePrefs(); applyPrefs(); Sound.play('tap'); renderSettings(); }));
+  }
+  function renderStats() {
+    const r = Object.assign({ played: 0, won: 0, streak: 0, best: 0 }, store.get(REC_KEY) || {});
+    $('stats').innerHTML = `<div class="stat${r.streak > 1 ? ' hot' : ''}"><b>${r.streak}</b><small>Win streak</small></div><div class="stat"><b>${r.best}</b><small>Best streak</small></div><div class="stat"><b>${r.won}</b><small>Games won</small></div>`;
+    $('statsNote').textContent = r.played ? `${r.played} game${r.played === 1 ? '' : 's'} played, ${Math.round(r.won / r.played * 100)}% won` : 'Finish a game to start your stats.';
+    $('resetWrap').innerHTML = '<button class="linkbtn" id="resetStats">Reset stats</button>';
+    $('resetStats').addEventListener('click', () => {
+      $('resetWrap').innerHTML = 'Reset all stats? <button class="linkbtn danger" id="resetYes">Reset</button> <button class="linkbtn" id="resetNo">Cancel</button>';
+      $('resetYes').addEventListener('click', () => { store.set(REC_KEY, { played: 0, won: 0, streak: 0, best: 0 }); renderStats(); renderRecord(); });
+      $('resetNo').addEventListener('click', renderStats);
+    });
+  }
+  function onNameInput() {
+    prefs.myName = $('nmYou').value.slice(0, 12);
+    prefs.bots = [0, 1, 2].map(i => $('nmBot' + i).value.slice(0, 12));
+    savePrefs();
+    if (S) S.players.forEach((p, k) => { if (p.cpu) p.name = botName(k - 1); });
+  }
+  ['nmYou', 'nmBot0', 'nmBot1', 'nmBot2'].forEach(id => { $(id).addEventListener('input', onNameInput); $(id).addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); }); });
+  function renderSetupPrefs() {
+    $('setupPrefs').innerHTML = `Computer skill: <b>${SKILL_NAMES[prefs.skill]}</b>. Turn timer: <b>${prefs.timer ? 'on' : 'off'}</b>. Game clock: <b>${prefs.clock ? 'on' : 'off'}</b>. Change these, the card back and the table in Settings.`;
+  }
+  let lastFocus = null;
+  function openSettings() { lastFocus = document.activeElement; renderSettings(); $('settingsBg').hidden = false; $('setTitle').focus(); }
+  function closeSettings() { $('settingsBg').hidden = true; renderSetupPrefs(); if (S && !busy && !animCount) render(); if (lastFocus && lastFocus.focus) lastFocus.focus(); }
+  $('swTwos').addEventListener('click', () => { prefs.twos = prefs.twos === 'minus' ? 'plus' : 'minus'; savePrefs(); setUnknown(); renderTwosRule(); renderSettings(); Sound.play('tap'); if (S && !busy && !animCount) render(); });
+  document.querySelectorAll('input[name="skill"]').forEach(i => i.addEventListener('change', () => { prefs.skill = i.value; savePrefs(); Sound.play('tap'); }));
+  $('swSound').addEventListener('click', () => { Sound.toggle(); renderMute(); renderSettings(); Sound.play('tap'); });
+  $('swTimer').addEventListener('click', () => {
+    prefs.timer = !prefs.timer; savePrefs(); renderSettings(); Sound.play('tap');
+    if (prefs.timer && S && (S.phase === 'flip2' || (S.turn === 0 && ['draw', 'drawn', 'flipOne'].includes(S.phase)))) startTimer(); else stopTimer();
+  });
+  $('swClock').addEventListener('click', () => { prefs.clock = !prefs.clock; savePrefs(); renderSettings(); renderClock(); Sound.play('tap'); });
+  $('settingsBtn').addEventListener('click', () => { Sound.play('tap'); openSettings(); });
+  $('setDone').addEventListener('click', () => { Sound.play('tap'); closeSettings(); });
+  $('settingsBg').addEventListener('click', e => { if (e.target === $('settingsBg')) closeSettings(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('settingsBg').hidden) closeSettings(); });
+
+  // ================= turn timer =================
+  let tickInt = null, lastBeep = 0;
+  function startTimer() {
+    if (!S) return;
+    if (!prefs.timer) { S.deadline = null; renderTimer(); return; }
+    S.deadline = Date.now() + TURN_MS;
+    if (!tickInt) tickInt = setInterval(tick, 200);
+    renderTimer();
+  }
+  function stopTimer() { if (S) S.deadline = null; renderTimer(); }
+  function renderTimer() {
+    const t = $('timer');
+    if (!S || !S.deadline || !prefs.timer) { t.hidden = true; return; }
+    const left = Math.max(0, S.deadline - Date.now());
+    t.hidden = false;
+    t.classList.toggle('low', left <= 10000);
+    $('timerBar').style.width = (left / TURN_MS * 100) + '%';
+    const sec = Math.ceil(left / 1000);
+    $('timerText').textContent = `0:${String(sec).padStart(2, '0')}`;
+  }
+  function tick() {
+    if (!S || !S.deadline) { renderTimer(); return; }
+    if (!$('settingsBg').hidden) { S.deadline += 200; return; } // paused while Settings is open
+    const left = S.deadline - Date.now();
+    renderTimer();
+    const sec = Math.ceil(left / 1000);
+    if (left > 0 && sec <= 5 && sec !== lastBeep) { lastBeep = sec; Sound.play('tap'); }
+    if (left <= 0) { S.deadline = null; renderTimer(); autoMove(); }
+  }
+  async function autoMove() {
+    const waitIdle = async () => { for (let k = 0; k < 50 && (busy || animCount); k++) await sleep(120); await lastAnim; };
+    await waitIdle();
+    if (!S) return;
+    const h = S.players[0].hand;
+    if (S.phase === 'flip2') {
+      while (S.phase === 'flip2') { const d = faceDown(h); if (!d.length) break; onYourCard(rand(d)); await waitIdle(); }
+      return;
+    }
+    if (S.turn !== 0) return;
+    if (S.phase === 'draw') { onDeck(); await waitIdle(); }
+    if (S.phase === 'drawn') {
+      if (S.drawnFrom === 'deck') { discardDrawn(); await waitIdle(); }
+      else { const b = bestSwap(h, S.drawn); onYourCard(b.i); return; }
+    }
+    if (S.phase === 'flipOne') endTurnNoFlip();
+  }
+
+  // ================= game clock =================
+  // Counts only while the game is on screen and not finished.
+  function renderClock() {
+    const c = $('clock');
+    if (!S || !prefs.clock) { c.hidden = true; return; }
+    const t = Math.floor((S.elapsed || 0) / 1000), h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60, sec = t % 60;
+    c.hidden = false;
+    c.innerHTML = `\u23F1\uFE0E <b>${h ? h + ':' + String(m).padStart(2, '0') : m}:${String(sec).padStart(2, '0')}</b>`;
+  }
+  let clockLast = Date.now();
+  setInterval(() => {
+    const now = Date.now(), dt = now - clockLast; clockLast = now;
+    if (S && S.phase !== 'gameOver' && !document.hidden && dt < 5000) S.elapsed = (S.elapsed || 0) + dt;
+    renderClock();
+  }, 1000);
+
+  // ================= wiring =================
+  $('deckBtn').addEventListener('click', onDeck);
+  $('discardDrawn').addEventListener('click', discardDrawn);
+  $('endTurnBtn').addEventListener('click', endTurnNoFlip);
+  $('newGame').addEventListener('click', () => { Sound.play('tap'); showSetup(); });
+  $('muteBtn').addEventListener('click', () => { Sound.toggle(); renderMute(); Sound.play('tap'); });
+  $('startBtn').addEventListener('click', () => {
+    const opp = +document.querySelector('input[name="opp"]:checked').value;
+    const tgt = +document.querySelector('input[name="tgt"]:checked').value;
+    startGame({ opp, tgt });
+  });
+  document.querySelectorAll('.seg input').forEach(i => i.addEventListener('change', () => Sound.play('tap')));
+  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (S && !busy && !animCount) render(); }, 150); });
+  renderMute();
+  renderSetupPrefs();
+  renderTwosRule();
+
+  function start(data) {
+    const st = data && data.state;
+    if (st && st.v === 2 && st.players) {
+      S = st;
+      $('setup').hidden = true; $('table').hidden = false; $('newGame').hidden = false;
+      if (S.phase === 'reveal') { S.phase = totals().some(t => t >= S.target) ? 'gameOver' : 'holeOver'; render(); }
+      else if (S.phase === 'deal') { S.phase = 'flip2'; S.msg = `Hole ${S.hole}. Tap <b>two of your cards</b> to turn them over.`; render(); }
+      else if (S.phase === 'cpu' || S.phase === 'between') {
+        if (S.drawn && S.drawnBy !== 0) { S.discard.push(S.drawn); S.drawn = null; }
+        beginTurn(S.turn);
+      } else render();
+    } else showSetup();
+    try { window.claude?.hot?.snapshot?.(() => ({ state: S })); } catch {}
+  }
+  window.__golf = { get S() { return S; }, handScore };
+  window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+})();
+</script>
+
+<script>
+if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+</script>
+</body>
+</html>
