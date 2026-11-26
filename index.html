@@ -54,6 +54,12 @@
 :root[data-back="emerald"] { --back-a: #1f9563; --back-b: #0a3a26; }
 :root[data-back="midnight"] { --back-a: #2c2c36; --back-b: #0b0b10; --back-line: rgba(240,201,79,.4); }
 :root[data-back="sunset"] { --back-a: #f08a3c; --back-b: #a3285a; }
+/* holiday backs: the Holiday choice picks one by date */
+:root[data-back="valentine"] { --back-a: #e8507f; --back-b: #8e1442; --back-line: rgba(255,214,228,.35); --emblem: "\1F496"; }
+:root[data-back="july4"] { --back-a: #2a4ea8; --back-b: #0c1a45; --back-line: rgba(255,255,255,.28); --emblem: "\2605"; --emblem-c: #c8102e; }
+:root[data-back="halloween"] { --back-a: #3a1d5c; --back-b: #0e0616; --back-line: rgba(255,140,30,.45); --emblem: "\1F383"; }
+:root[data-back="thanksgiving"] { --back-a: #c9662a; --back-b: #5a2a0e; --back-line: rgba(255,214,140,.32); --emblem: "\1F983"; }
+:root[data-back="christmas"] { --back-a: #1f8a4c; --back-b: #0b3a20; --back-line: rgba(230,40,50,.5); --emblem: "\1F384"; }
 :root[data-felt="blue"] { --felt-hi: #2a6fb3; --felt: #164a82; --felt-lo: #0a2448; --room: #050f1d; --glow: rgba(50,110,190,.35); --chalk-soft: #aac0d8; }
 :root[data-felt="red"] { --felt-hi: #a8343c; --felt: #741a22; --felt-lo: #3a0a0f; --room: #140406; --glow: rgba(170,50,60,.3); --chalk-soft: #dcb2b5; }
 :root[data-felt="purple"] { --felt-hi: #6a45b0; --felt: #432879; --felt-lo: #1f1039; --room: #0b0616; --glow: rgba(120,80,200,.32); --chalk-soft: #c4b6e0; }
@@ -73,6 +79,8 @@
 .sw.back .chip { width: 44px; height: 62px; background: #fbfaf6; padding: 4px; }
 .sw.back .chip i { display: block; width: 100%; height: 100%; border-radius: 6px;
   background: repeating-linear-gradient(45deg, var(--l) 0 1.5px, transparent 1.5px 6px), repeating-linear-gradient(-45deg, var(--l) 0 1.5px, transparent 1.5px 6px), linear-gradient(160deg, var(--a), var(--b)); }
+.sw.back .chip i { position: relative; }
+.sw.back .chip i b { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; transform: translate(-50%, -50%); border-radius: 50%; background: #fbf6ea; display: grid; place-items: center; font-size: 15px; line-height: 1; font-style: normal; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
 .sw.tbl .chip { width: 44px; height: 44px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, var(--a), var(--b) 75%); }
 .sw[aria-pressed="true"] { color: var(--chalk); }
 .sw[aria-pressed="true"] .chip { box-shadow: 0 0 0 3px var(--gold), 0 0 14px rgba(240,201,79,.45); transform: translateY(-2px); }
@@ -179,6 +187,12 @@ h1 svg { filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
   box-shadow: inset 0 0 0 1px rgba(0,0,0,.25), inset 0 2px 6px rgba(255,255,255,.15);
 }
 .cf.back::after { content: ""; position: absolute; inset: 0; background: linear-gradient(125deg, rgba(255,255,255,.35) 0%, rgba(255,255,255,0) 40%); }
+.cf.back .emb { display: none; }
+:root[data-back="valentine"] .cf.back .emb, :root[data-back="july4"] .cf.back .emb, :root[data-back="halloween"] .cf.back .emb, :root[data-back="thanksgiving"] .cf.back .emb, :root[data-back="christmas"] .cf.back .emb {
+  display: grid; place-items: center; position: absolute; left: 50%; top: 50%; width: 46%; aspect-ratio: 1; transform: translate(-50%, -50%);
+  border-radius: 50%; background: radial-gradient(circle at 40% 35%, #fffdf6, #efe6d2); box-shadow: 0 2px 5px rgba(0,0,0,.35), inset 0 0 0 2px rgba(0,0,0,.08);
+  font-size: calc(var(--w) * .27); line-height: 1; color: var(--emblem-c, #222); }
+:root[data-back] .cf.back .emb::before { content: var(--emblem, ""); }
 .card .rk { position: absolute; top: 5%; left: 9%; font-family: var(--f-display); font-weight: 800; font-size: calc(var(--w) * .27); line-height: 1; letter-spacing: -.03em; }
 .card .st { position: absolute; top: 5%; right: 8%; font-size: calc(var(--w) * .21); line-height: 1.2; }
 .card .big { position: absolute; inset: 0; display: grid; place-items: center; font-size: calc(var(--w) * .5); padding-top: 14%; text-shadow: 0 2px 2px rgba(0,0,0,.12); }
@@ -233,7 +247,18 @@ h1 svg { filter: drop-shadow(0 2px 3px rgba(0,0,0,.5)); }
 .status { min-height: 2.7em; text-align: center; font-size: .95rem; line-height: 1.35; text-wrap: balance; padding-inline: 6px; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
 .status b { color: var(--gold); }
 .actions { display: flex; justify-content: center; gap: 8px; }
-.actions:not(:has(button:not([hidden]))) { display: none; }
+.actions { min-height: 38px; }
+@media (max-height: 820px) {
+  .wrap { padding-block: 6px 24px; gap: 8px; }
+  .rail { padding: 6px; border-radius: 24px; }
+  .felt { padding: 8px 8px 10px; gap: 6px; border-radius: 19px; }
+  .table-mid { padding: 2px 0 0; }
+  .pile { gap: 7px; }
+  .opp { padding: 4px 4px 6px; gap: 4px; }
+  .you-side { gap: 5px; padding-top: 0; }
+  .status { font-size: .9rem; min-height: 2.6em; }
+  .icon-btn { width: 36px; height: 36px; }
+}
 
 .btn {
   font: 700 .92rem var(--f-body); border-radius: 14px; border: 0; padding: 10px 18px; cursor: pointer; min-height: 44px;
@@ -345,7 +370,7 @@ details.rules b { color: var(--gold); }
           <section class="opps" id="opps" aria-label="Computer players"></section>
 
           <section class="table-mid" aria-label="Piles">
-            <div class="pile"><button class="card" id="deckBtn" data-key="deck" aria-label="Draw from the deck"><div class="c3d down"><div class="cf front"></div><div class="cf back"></div></div></button><small id="deckCount">Deck</small></div>
+            <div class="pile"><button class="card" id="deckBtn" data-key="deck" aria-label="Draw from the deck"><div class="c3d down"><div class="cf front"></div><div class="cf back"><span class="emb"></span></div></div></button><small id="deckCount">Deck</small></div>
             <div class="pile"><div id="discardSlot"></div><small>Discard</small></div>
             <div class="pile"><div id="drawnSlot"></div><small id="handHint">Drawn card</small></div>
           </section>
@@ -453,6 +478,26 @@ details.rules b { color: var(--gold); }
     { id: 'midnight', name: 'Midnight', a: '#2c2c36', b: '#0b0b10', l: 'rgba(240,201,79,.5)' },
     { id: 'sunset', name: 'Sunset', a: '#f08a3c', b: '#a3285a', l: 'rgba(255,255,255,.2)' }
   ];
+  // Holiday back: always shows the next holiday coming up (its season ends on the day itself)
+  const HOLIDAYS = {
+    valentine: { name: "Valentine's", a: '#e8507f', b: '#8e1442', l: 'rgba(255,214,228,.35)', e: '\u{1F496}' },
+    july4: { name: '4th of July', a: '#2a4ea8', b: '#0c1a45', l: 'rgba(255,255,255,.28)', e: '\u2605', c: '#c8102e' },
+    halloween: { name: 'Halloween', a: '#3a1d5c', b: '#0e0616', l: 'rgba(255,140,30,.45)', e: '\u{1F383}' },
+    thanksgiving: { name: 'Thanksgiving', a: '#c9662a', b: '#5a2a0e', l: 'rgba(255,214,140,.32)', e: '\u{1F983}' },
+    christmas: { name: 'Christmas', a: '#1f8a4c', b: '#0b3a20', l: 'rgba(230,40,50,.5)', e: '\u{1F384}' }
+  };
+  function holidayFor(d) {
+    const y = d.getFullYear(), m = d.getMonth(), day = d.getDate();
+    const n = new Date(y, 10, 1).getDay(), thanks = 1 + ((4 - n + 7) % 7) + 21; // 4th Thursday of November
+    const md = m * 100 + day;
+    if (md <= 114) return 'valentine';           // through Feb 14
+    if (md <= 604) return 'july4';               // through Jul 4
+    if (md <= 931) return 'halloween';           // through Oct 31
+    if (md <= 1000 + thanks) return 'thanksgiving';
+    if (m === 10 || md <= 1125) return 'christmas'; // through Dec 25
+    return 'valentine';                           // Dec 26 on: next up is Valentine's
+  }
+  const holidayId = () => holidayFor(window.__golfDate ? new Date(window.__golfDate) : new Date());
   const FELTS = [
     { id: 'green', name: 'Green', a: '#1b6a4d', b: '#082a1f', room: '#06150f' },
     { id: 'blue', name: 'Blue', a: '#2a6fb3', b: '#0a2448', room: '#050f1d' },
@@ -474,7 +519,7 @@ details.rules b { color: var(--gold); }
   function renderTwosRule() { const el = document.getElementById('twoRule'); if (el) el.textContent = prefs.twos === 'minus' ? '2 = \u22122' : '2 = 2'; }
   setUnknown();
   function applyPrefs() {
-    document.documentElement.dataset.back = prefs.back;
+    document.documentElement.dataset.back = prefs.back === 'holiday' ? holidayId() : prefs.back;
     document.documentElement.dataset.felt = prefs.felt;
     const f = FELTS.find(x => x.id === prefs.felt) || FELTS[0];
     const tc = document.querySelector('meta[name="theme-color"]'); if (tc) tc.content = f.room;
@@ -971,18 +1016,36 @@ details.rules b { color: var(--gold); }
         el.setAttribute('aria-label', `${c.r} of ${SUIT_NAMES[c.s]}, ${v} points`);
       }
     } else el.setAttribute('aria-label', 'Face-down card');
-    el.innerHTML = `<div class="c3d${c.up ? '' : ' down'}"><div class="cf front">${front}</div><div class="cf back"></div></div>`;
+    el.innerHTML = `<div class="c3d${c.up ? '' : ' down'}"><div class="cf front">${front}</div><div class="cf back"><span class="emb"></span></div></div>`;
     return el;
   }
 
+  // Space the table needs besides the cards (header, labels, message, buttons). Measured after each render.
+  let chromeH = 290;
+  const viewH = () => Math.round(window.visualViewport ? visualViewport.height : innerHeight);
+  const cardsH = (o, m, y) => 1.4 * (2 * o + m + 2 * y);
   function sizes() {
     const W = Math.min(document.documentElement.clientWidth, 580) - 24 - 18 - 20;
     const n = S.players.length - 1;
-    const oppW = Math.max(22, Math.min(n === 1 ? 54 : 44, Math.floor((W - 6 * (n - 1) - n * (10 + 8)) / (3 * n))));
-    const youW = Math.max(56, Math.min(92, Math.floor((W - 18) / 3.3)));
-    const midW = Math.max(50, Math.min(74, Math.floor((W - 32) / 3.7)));
-    return { oppW: oppW + 'px', youW: youW + 'px', midW: midW + 'px' };
+    let oppW = Math.max(22, Math.min(n === 1 ? 54 : 44, Math.floor((W - 6 * (n - 1) - n * (10 + 8)) / (3 * n))));
+    let youW = Math.max(56, Math.min(92, Math.floor((W - 18) / 3.3)));
+    let midW = Math.max(50, Math.min(74, Math.floor((W - 32) / 3.7)));
+    // shrink the cards so the whole table fits the screen height without scrolling
+    const avail = viewH() - chromeH, tot = cardsH(oppW, midW, youW);
+    if (tot > avail) {
+      const k = Math.max(.5, avail / tot);
+      oppW = Math.max(20, Math.floor(oppW * k)); midW = Math.max(36, Math.floor(midW * k)); youW = Math.max(44, Math.floor(youW * k));
+    }
+    return { oppW: oppW + 'px', youW: youW + 'px', midW: midW + 'px', n: [oppW, midW, youW] };
   }
+  function measureFit(sz) {
+    const rail = document.querySelector('#table .rail');
+    if (!rail || $('table').hidden) return;
+    const bottom = rail.getBoundingClientRect().bottom + scrollY;
+    const c = Math.ceil(bottom - cardsH(...sz.n) + 8);
+    if (Math.abs(c - chromeH) > 4) { chromeH = c; refit(); }
+  }
+  let rt; function refit() { clearTimeout(rt); rt = setTimeout(() => { if (S && !busy && !animCount) render(); else refit(); }, 150); }
   const avatar = p => `<span class="avatar" style="background:${p.color}">${esc([...p.name][0] || '?')}</span>`;
 
   function render() {
@@ -1088,6 +1151,7 @@ details.rules b { color: var(--gold); }
     renderStandings();
     renderRecord();
     renderClock();
+    measureFit(sz);
     return runAnims();
   }
 
@@ -1114,7 +1178,9 @@ details.rules b { color: var(--gold); }
 
   // ================= settings =================
   function renderSettings() {
-    $('swBack').innerHTML = BACKS.map(b => `<button class="sw back" data-id="${b.id}" aria-pressed="${prefs.back === b.id}" aria-label="${b.name} card back"><span class="chip"><i style="--a:${b.a};--b:${b.b};--l:${b.l}"></i></span>${b.name}</button>`).join('');
+    const hb = HOLIDAYS[holidayId()];
+    $('swBack').innerHTML = BACKS.map(b => `<button class="sw back" data-id="${b.id}" aria-pressed="${prefs.back === b.id}" aria-label="${b.name} card back"><span class="chip"><i style="--a:${b.a};--b:${b.b};--l:${b.l}"></i></span>${b.name}</button>`).join('') +
+      `<button class="sw back" data-id="holiday" aria-pressed="${prefs.back === 'holiday'}" aria-label="Holiday card back, now ${hb.name}. Changes with the season."><span class="chip"><i style="--a:${hb.a};--b:${hb.b};--l:${hb.l}"><b style="color:${hb.c || '#222'}">${hb.e}</b></i></span>Holiday</button>`;
     $('swFelt').innerHTML = FELTS.map(f => `<button class="sw tbl" data-id="${f.id}" aria-pressed="${prefs.felt === f.id}" aria-label="${f.name} table"><span class="chip" style="--a:${f.a};--b:${f.b}"></span>${f.name}</button>`).join('');
     $('sk' + SKILL_NAMES[prefs.skill]).checked = true;
     $('swTwos').setAttribute('aria-checked', String(prefs.twos === 'minus'));
@@ -1239,7 +1305,8 @@ details.rules b { color: var(--gold); }
     startGame({ opp, tgt });
   });
   document.querySelectorAll('.seg input').forEach(i => i.addEventListener('change', () => Sound.play('tap')));
-  let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (S && !busy && !animCount) render(); }, 150); });
+  window.addEventListener('resize', refit);
+  if (window.visualViewport) visualViewport.addEventListener('resize', refit);
   renderMute();
   renderSetupPrefs();
   renderTwosRule();
