@@ -449,6 +449,7 @@ details.rules b { color: var(--gold); }
       <div class="toggle-row"><span>Turn timer<small>30 seconds per turn. When time runs out, the game makes a safe move for you.</small></span><button class="switch" id="swTimer" role="switch" aria-checked="false" aria-label="Turn timer"></button></div>
     </div>
     <button class="btn" id="setDone">Done</button>
+    <p id="verLine" style="margin:0;text-align:center;font:500 .72rem var(--f-mono);color:var(--chalk-soft)"></p>
   </section>
 </div>
 
@@ -553,8 +554,27 @@ details.rules b { color: var(--gold); }
       if (ctx.state !== 'running') ctx.resume().catch(() => {});
       return ctx;
     }
+    // iPhone mutes web sound when the ring/silent switch is on silent. Asking for "playback" (and keeping a
+    // silent audio track going, for older iOS) lets game sounds play like a regular app.
+    let keep = null;
+    function silentUrl() {
+      const n = 4410, b = new ArrayBuffer(44 + n * 2), v = new DataView(b), w = (o, t) => [...t].forEach((ch, i) => v.setUint8(o + i, ch.charCodeAt(0)));
+      w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+      v.setUint32(24, 44100, true); v.setUint32(28, 88200, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
+      return URL.createObjectURL(new Blob([b], { type: 'audio/wav' }));
+    }
+    function session(on) {
+      try { if (navigator.audioSession) navigator.audioSession.type = on ? 'playback' : 'auto'; } catch {}
+      try {
+        if (on) {
+          if (!keep) { keep = document.createElement('audio'); keep.src = silentUrl(); keep.loop = true; keep.setAttribute('playsinline', ''); keep.setAttribute('x-webkit-airplay', 'deny'); }
+          if (keep.paused) keep.play().catch(() => {});
+        } else if (keep) keep.pause();
+      } catch {}
+    }
     let primed = false;
     function prime() {
+      if (!muted && !document.hidden) session(true);
       // a silent blip during a tap is what lets iPhone start sound
       const c = ac(); if (!c) return;
       try { const b = c.createBuffer(1, 1, 22050), src = c.createBufferSource(); src.buffer = b; src.connect(c.destination); src.start(0); primed = true; } catch {}
@@ -583,7 +603,7 @@ details.rules b { color: var(--gold); }
       lose(t) { tone(t, 392, .3, .12, 'triangle'); tone(t + .18, 311, .5, .12, 'triangle'); }
     };
     return {
-      unlock() { if (!ctx || ctx.state !== 'running' || !primed) prime(); },
+      unlock() { if (!ctx || ctx.state !== 'running' || !primed || (!muted && (!keep || keep.paused))) prime(); },
       play(kind, delayMs = 0) {
         if (muted) return;
         const c = ac(); if (!c) return;
@@ -591,11 +611,13 @@ details.rules b { color: var(--gold); }
         if (c.state === 'running') go(); else c.resume().then(() => { if (c.state === 'running') go(); }).catch(() => {});
       },
       get muted() { return muted; },
-      toggle() { muted = !muted; store.set(MUTE_KEY, muted); if (!muted) ac(); return muted; }
+      get state() { return muted ? 'off' : ctx ? ctx.state : 'not started'; },
+      toggle() { muted = !muted; store.set(MUTE_KEY, muted); if (!muted) prime(); else session(false); return muted; },
+      sleep() { session(false); }
     };
   })();
   ['pointerdown', 'touchend', 'click', 'keydown'].forEach(ev => window.addEventListener(ev, () => Sound.unlock(), { passive: true, capture: true }));
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) Sound.unlock(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) Sound.sleep(); else Sound.unlock(); });
   function renderMute() {
     const m = Sound.muted;
     $('muteBtn').setAttribute('aria-label', m ? 'Sound is off. Turn sound on' : 'Sound is on. Turn sound off');
@@ -1195,6 +1217,7 @@ details.rules b { color: var(--gold); }
     $('sk' + SKILL_NAMES[prefs.skill]).checked = true;
     $('swTwos').setAttribute('aria-checked', String(prefs.twos === 'minus'));
     renderStats();
+    $('verLine').textContent = `Version 14 \u00b7 sound: ${Sound.state}`;
     $('nmYou').value = prefs.myName || '';
     [0, 1, 2].forEach(i => { $('nmBot' + i).value = (prefs.bots && prefs.bots[i]) || ''; });
     $('swSound').setAttribute('aria-checked', String(!Sound.muted));

@@ -1,5 +1,5 @@
 // Golf Card Game: keeps the game working offline.
-const CACHE = 'golf-v13';
+const CACHE = 'golf-v14';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener('activate', e => {
