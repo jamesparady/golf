@@ -563,6 +563,7 @@ details.rules b { color: var(--gold); }
     }
     // "ambient" lets game sounds mix with a podcast or music instead of pausing it (iPhone, iOS 17+)
     function session(on) { try { if (navigator.audioSession && on) navigator.audioSession.type = 'ambient'; } catch {} }
+    session(true);
     let primed = false;
     function prime() {
       if (!muted && !document.hidden) session(true);
