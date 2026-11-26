@@ -339,6 +339,13 @@ details.rules b { color: var(--gold); }
     </div>
   </header>
 
+  <section class="panel setup" id="resume" hidden>
+    <h2>Welcome back</h2>
+    <p id="resumeInfo"></p>
+    <button class="btn" id="resumeBtn">Continue game</button>
+    <button class="btn ghost" id="freshBtn">Start a new game</button>
+  </section>
+
   <section class="panel setup" id="setup" hidden>
     <div class="fan" id="fan" aria-hidden="true"></div>
     <h2>New game</h2>
@@ -465,7 +472,7 @@ details.rules b { color: var(--gold); }
   const BOT_COLORS = ['#f2a7c3', '#8fd3f4', '#c9b3f5'];
   const $ = id => document.getElementById(id);
   const sleep = ms => new Promise(r => setTimeout(r, ms));
-  const SET_KEY = 'golf-settings-v2', REC_KEY = 'golf-record-v2', MUTE_KEY = 'golf-muted';
+  const SAVE_KEY = 'golf-save-v2', SET_KEY = 'golf-settings-v2', REC_KEY = 'golf-record-v2', MUTE_KEY = 'golf-muted';
   const store = {
     get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
@@ -554,24 +561,8 @@ details.rules b { color: var(--gold); }
       if (ctx.state !== 'running') ctx.resume().catch(() => {});
       return ctx;
     }
-    // iPhone mutes web sound when the ring/silent switch is on silent. Asking for "playback" (and keeping a
-    // silent audio track going, for older iOS) lets game sounds play like a regular app.
-    let keep = null;
-    function silentUrl() {
-      const n = 4410, b = new ArrayBuffer(44 + n * 2), v = new DataView(b), w = (o, t) => [...t].forEach((ch, i) => v.setUint8(o + i, ch.charCodeAt(0)));
-      w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
-      v.setUint32(24, 44100, true); v.setUint32(28, 88200, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, 'data'); v.setUint32(40, n * 2, true);
-      return URL.createObjectURL(new Blob([b], { type: 'audio/wav' }));
-    }
-    function session(on) {
-      try { if (navigator.audioSession) navigator.audioSession.type = on ? 'playback' : 'auto'; } catch {}
-      try {
-        if (on) {
-          if (!keep) { keep = document.createElement('audio'); keep.src = silentUrl(); keep.loop = true; keep.setAttribute('playsinline', ''); keep.setAttribute('x-webkit-airplay', 'deny'); }
-          if (keep.paused) keep.play().catch(() => {});
-        } else if (keep) keep.pause();
-      } catch {}
-    }
+    // "ambient" lets game sounds mix with a podcast or music instead of pausing it (iPhone, iOS 17+)
+    function session(on) { try { if (navigator.audioSession && on) navigator.audioSession.type = 'ambient'; } catch {} }
     let primed = false;
     function prime() {
       if (!muted && !document.hidden) session(true);
@@ -603,7 +594,7 @@ details.rules b { color: var(--gold); }
       lose(t) { tone(t, 392, .3, .12, 'triangle'); tone(t + .18, 311, .5, .12, 'triangle'); }
     };
     return {
-      unlock() { if (!ctx || ctx.state !== 'running' || !primed || (!muted && (!keep || keep.paused))) prime(); },
+      unlock() { if (!ctx || ctx.state !== 'running' || !primed) prime(); },
       play(kind, delayMs = 0) {
         if (muted) return;
         const c = ac(); if (!c) return;
@@ -613,7 +604,7 @@ details.rules b { color: var(--gold); }
       get muted() { return muted; },
       get state() { return muted ? 'off' : ctx ? ctx.state : 'not started'; },
       toggle() { muted = !muted; store.set(MUTE_KEY, muted); if (!muted) prime(); else session(false); return muted; },
-      sleep() { session(false); }
+      sleep() {}
     };
   })();
   ['pointerdown', 'touchend', 'click', 'keydown'].forEach(ev => window.addEventListener(ev, () => Sound.unlock(), { passive: true, capture: true }));
@@ -1184,6 +1175,7 @@ details.rules b { color: var(--gold); }
     renderRecord();
     renderClock();
     measureFit(sz);
+    store.set(SAVE_KEY, S.phase === 'gameOver' ? null : S);
     return runAnims();
   }
 
@@ -1217,7 +1209,7 @@ details.rules b { color: var(--gold); }
     $('sk' + SKILL_NAMES[prefs.skill]).checked = true;
     $('swTwos').setAttribute('aria-checked', String(prefs.twos === 'minus'));
     renderStats();
-    $('verLine').textContent = `Version 14 \u00b7 sound: ${Sound.state}`;
+    $('verLine').textContent = `Version 15 \u00b7 sound: ${Sound.state}`;
     $('nmYou').value = prefs.myName || '';
     [0, 1, 2].forEach(i => { $('nmBot' + i).value = (prefs.bots && prefs.bots[i]) || ''; });
     $('swSound').setAttribute('aria-checked', String(!Sound.muted));
@@ -1344,18 +1336,32 @@ details.rules b { color: var(--gold); }
   renderSetupPrefs();
   renderTwosRule();
 
-  function start(data) {
-    const st = data && data.state;
-    if (st && st.v === 2 && st.players) {
+  function restore(st) {
       S = st;
-      $('setup').hidden = true; $('table').hidden = false; $('newGame').hidden = false;
+      $('resume').hidden = true; $('setup').hidden = true; $('table').hidden = false; $('newGame').hidden = false;
+      if (['flip2', 'draw', 'drawn', 'flipOne'].includes(S.phase)) { S.deadline = null; startTimer(); }
       if (S.phase === 'reveal') { S.phase = totals().some(t => t >= S.target) ? 'gameOver' : 'holeOver'; render(); }
       else if (S.phase === 'deal') { S.phase = 'flip2'; S.msg = `Hole ${S.hole}. Tap <b>two of your cards</b> to turn them over.`; render(); }
       else if (S.phase === 'cpu' || S.phase === 'between') {
         if (S.drawn && S.drawnBy !== 0) { S.discard.push(S.drawn); S.drawn = null; }
         beginTurn(S.turn);
       } else render();
-    } else showSetup();
+  }
+  const validSave = st => st && st.v === 2 && st.players && st.phase && st.phase !== 'gameOver';
+  function showResume(st) {
+    $('setup').hidden = true; $('table').hidden = true; $('newGame').hidden = true; $('resume').hidden = false;
+    const t = st.players.map(p => p.scores.reduce((a, b) => a + b, 0));
+    const who = st.players.map((p, i) => `${esc(i === 0 ? myName() : p.name)} ${fmt(t[i])}`).join(', ');
+    $('resumeInfo').innerHTML = `You have a game in progress: hole <b>${st.hole}</b>, playing to <b>${st.target}</b>.` + (st.hole > 1 ? ` Scores so far: ${who}.` : '') + ' Do you want to continue it or start a new one?';
+    $('resumeBtn').onclick = () => { Sound.play('tap'); restore(st); };
+    $('freshBtn').onclick = () => { Sound.play('tap'); store.set(SAVE_KEY, null); $('resume').hidden = true; showSetup(); };
+  }
+  function start(data) {
+    const st = data && data.state;
+    const saved = store.get(SAVE_KEY);
+    if (validSave(st)) restore(st);
+    else if (validSave(saved)) showResume(saved);
+    else showSetup();
     try { window.claude?.hot?.snapshot?.(() => ({ state: S })); } catch {}
   }
   window.__golf = { get S() { return S; }, handScore };
