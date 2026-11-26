@@ -542,14 +542,22 @@ details.rules b { color: var(--gold); }
     let ctx = null, noise = null, master = null;
     let muted = !!store.get(MUTE_KEY);
     function ac() {
+      if (ctx && ctx.state === 'closed') ctx = null;
       if (!ctx) {
         try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch { return null; }
         master = ctx.createGain(); master.gain.value = .9; master.connect(ctx.destination);
         noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
         const d = noise.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
       }
-      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+      // iPhone home screen apps leave the sound "interrupted" after the app was in the background
+      if (ctx.state !== 'running') ctx.resume().catch(() => {});
       return ctx;
+    }
+    let primed = false;
+    function prime() {
+      // a silent blip during a tap is what lets iPhone start sound
+      const c = ac(); if (!c) return;
+      try { const b = c.createBuffer(1, 1, 22050), src = c.createBufferSource(); src.buffer = b; src.connect(c.destination); src.start(0); primed = true; } catch {}
     }
     function burst(t, { f = 2500, q = 1.2, dur = .06, g = .5, type = 'bandpass', f2 = null }) {
       const src = ctx.createBufferSource(); src.buffer = noise;
@@ -575,17 +583,19 @@ details.rules b { color: var(--gold); }
       lose(t) { tone(t, 392, .3, .12, 'triangle'); tone(t + .18, 311, .5, .12, 'triangle'); }
     };
     return {
-      unlock() { ac(); },
+      unlock() { if (!ctx || ctx.state !== 'running' || !primed) prime(); },
       play(kind, delayMs = 0) {
         if (muted) return;
-        const c = ac(); if (!c || c.state !== 'running') return;
-        try { kinds[kind](c.currentTime + .01 + delayMs / 1000); } catch {}
+        const c = ac(); if (!c) return;
+        const go = () => { try { kinds[kind](c.currentTime + .01 + delayMs / 1000); } catch {} };
+        if (c.state === 'running') go(); else c.resume().then(() => { if (c.state === 'running') go(); }).catch(() => {});
       },
       get muted() { return muted; },
       toggle() { muted = !muted; store.set(MUTE_KEY, muted); if (!muted) ac(); return muted; }
     };
   })();
-  ['pointerdown', 'keydown'].forEach(ev => window.addEventListener(ev, () => Sound.unlock(), { passive: true }));
+  ['pointerdown', 'touchend', 'click', 'keydown'].forEach(ev => window.addEventListener(ev, () => Sound.unlock(), { passive: true, capture: true }));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) Sound.unlock(); });
   function renderMute() {
     const m = Sound.muted;
     $('muteBtn').setAttribute('aria-label', m ? 'Sound is off. Turn sound on' : 'Sound is on. Turn sound off');
